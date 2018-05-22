@@ -38,7 +38,7 @@ class StoryDataset:
         ''' :param indices: a list of integers in range(0, data_size)
             :return: the corresponding batch'''
         assert np.all(0 <= indices) and np.all(indices < self.data_size)
-        return [self.stories[i] for i in indices]
+        return [self.story_ids[i] for i in indices]
 
 
 
@@ -145,7 +145,7 @@ class StoryBatch():
             self._seq_lengths = np.array([np.sum([sent.shape[0] for sent in story]) for story in self.stories ])  # list of sequence lengths per batch entry
         return self._seq_lengths
 
-    @property
+    @property   # the stories as lists of word-index-lists
     def stories(self):
         return self._stories
 
