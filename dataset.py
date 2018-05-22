@@ -145,6 +145,10 @@ class StoryBatch():
             self._seq_lengths = np.array([np.sum([sent.shape[0] for sent in story]) for story in self.stories ])  # list of sequence lengths per batch entry
         return self._seq_lengths
 
+    @property
+    def stories(self):
+        return self._stories
+
     def get_padded_data(self, which_sentences=[0,1,2,3,4], pad_target=True):
         """
         Pads the data with zeros, i.e. returns an np array of shape (batch_size, max_seq_length, dof). `max_seq_length`
