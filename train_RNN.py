@@ -90,22 +90,23 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
         epoch = 0
         while epoch < num_epochs:
             train_loss = 0
-            for ibatch in train_dataset.all_batches(shuffle=True):
-                X, Y, mask = ibatch.get_padded_data()
+            for ib, ibatch in enumerate(train_dataset.all_batches(shuffle=True)):
+                X, Y, batch_seq_lengths = ibatch.get_padded_data()
                 _, summary, step, loss = sess.run([train_op, train_summary_op, global_step, model.print_perplexity],
                                                     feed_dict={model.input_x: X,
                                                              model.input_y: Y,
-                                                             model.sequence_length_list: mask})
+                                                             model.sequence_length_list: batch_seq_lengths})
                 train_summary_writer.add_summary(summary=summary, global_step=step)
-                print(ibatch, np.max(loss),flush=True)
+                print("ibatch", ib, "max loss",np.max(loss),end='', flush=True)
                 train_loss += loss
             # -- validate --
-            X_v, Y_v, mask_v = val_dataset.next_batch(shuffle=False)
+            val_allbatch = val_dataset.next_batch(shuffle=False)
+            X_v, Y_v, val_seq_lengths = val_allbatch.get_padded_data()
             valid_loss = sess.run([model.print_perplexity], feed_dict={model.input_x: X_v,
                                                                        model.input_y: Y_v,
-                                                                       model.sequence_length_list: mask_v})
-            print("ibatch", ibatch, "valid_loss", valid_loss, flush=True)
-            print("ibatch", ibatch, "train_loss", train_loss / train_dataset.data_size, flush=True)
+                                                                       model.sequence_length_list: val_seq_lengths})[0]
+            print("ep:", epoch, "valid_loss", valid_loss, flush=True)
+            print("ep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)
             sys.stdout.flush()
             # Could do / TODO: store model and delete old checkpoints in regular intervals
             epoch += 1

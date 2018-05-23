@@ -58,12 +58,11 @@ def add_special_string(IDlist, max_length):
         a.append(0)
     return a
 
-# Todo: Remove dependence on max_length. Output: A list of 2d numpy matrices, not a numpy cube.
+#  Output: A list list of lists.
 def convert_text_data(data, word2id_dict): #, max_length):
     # convert data into IDlist with the same shape
     IDdata = [] #np.zeros(shape=(len(data),max_length), dtype=int)
     sequence_lengths = np.zeros(shape=(len(data),), dtype=int)
-    target_data = [] # np.zeros(shape=(len(data),max_length),dtype=int)
     for i, sentence in enumerate(data):
         sequence_lengths[i] = len(sentence)+1  # since we do not care what is after <eos>
         input_ID = add_special_string(word2id(sentence, word2id_dict), max_length=len(sentence) + 2)

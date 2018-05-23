@@ -28,7 +28,7 @@ class StoryDataset:
 
     def next_batch(self, shuffle=True):
         assert self.feeder is not None
-        return self.feeder.get_batch(shuffle=shuffle)
+        return self.feeder.next_batch(shuffle=shuffle)
 
     def all_batches(self, shuffle=True):
         assert self.feeder is not None
@@ -99,13 +99,14 @@ class StoryFeeder:
             ids = all_ids[ptr : ]
         else:
             ids = all_ids[ptr : ptr + self.batch_size]
-        return StoryBatch(stories=self.dataset.get_data(ids))
+        return StoryBatch(story_ids=self.dataset.get_data(ids))
 
     def adv_batchptr(self):
         self.batch_ptr = self.batch_ptr + 1
-        if self.batch_ptr == self.batch_size:
+        if self.batch_ptr == self.n_batches:
             self.batch_ptr = 0
             self.reshuffle()
+        assert self.batch_ptr < self.n_batches
 
     def next_batch(self, shuffle=True):
         batch = self.get_batch(shuffle=shuffle)
@@ -123,8 +124,8 @@ class StoryFeeder:
 
 
 class StoryBatch():
-    def __init__(self, stories=None):
-        self._stories = stories
+    def __init__(self, story_ids=None):
+        self._story_ids = story_ids
         self._mask = None
         self._seq_lengths = None # Lengths of every entire sequence, when concatenating all sentences of a story
 
@@ -142,12 +143,12 @@ class StoryBatch():
     @property
     def seq_lengths(self):
         if self._seq_lengths is None:
-            self._seq_lengths = np.array([np.sum([sent.shape[0] for sent in story]) for story in self.stories ])  # list of sequence lengths per batch entry
+            self._seq_lengths = np.array([np.sum([len(sent) for sent in story]) for story in self.story_ids ])  # list of sequence lengths per batch entry
         return self._seq_lengths
 
     @property   # the stories as lists of word-index-lists
-    def stories(self):
-        return self._stories
+    def story_ids(self):
+        return self._story_ids
 
     def get_padded_data(self, which_sentences=[0,1,2,3,4], pad_target=True):
         """
@@ -155,24 +156,25 @@ class StoryBatch():
         is the maximum occurring sequence length in the batch. Target is only padded if `pad_target` is True.
         :returns an 'input' consisting of the sentences given in :param which_sentences, concatenated to one list
                  a 'target' which is the same sentence-group, but shifted by one
-
+                 a 'mask' which masks out padded entries
         """
-        cur_seq_lengths = np.array([np.sum([story[i].shape[0] for i in which_sentences]) for story in self.stories])
+        cur_seq_lengths = np.array([np.sum([len(story[i]) for i in which_sentences]) for story in self.story_ids])
         max_seq_length = max(cur_seq_lengths)
 
         inputs = []
         targets = []
-        for x in self._stories:
-            X = np.concatenate([x[i] for i in which_sentences])[ : -1]
-            Y = np.concatenate([x[i] for i in which_sentences])[ 1 : ]
+        for something in self._story_ids:
+            X = [something[i] for i in which_sentences]
+            X = np.concatenate(X)[ : -1]
+            Y = [something[i] for i in which_sentences]
+            Y = np.concatenate(Y)[ 1 : ]
             missing = max_seq_length - X.shape[0]
             x_padded, y_padded = X, Y
             if missing > 0:
                 # this batch entry has a smaller sequence length then the max sequence length, so pad it with zeros
-                voc_len = X.shape[1]
-                x_padded = np.concatenate([X, np.zeros(shape=[missing, voc_len])], axis=0)
+                x_padded = np.concatenate([X, np.zeros(shape=[missing])], axis=0)
                 if pad_target:
-                    y_padded = np.concatenate([Y, np.zeros(shape=[missing, voc_len])], axis=0)
+                    y_padded = np.concatenate([Y, np.zeros(shape=[missing])], axis=0)
             assert len(x_padded) == max_seq_length
             inputs.append(x_padded)
 
@@ -180,10 +182,10 @@ class StoryBatch():
                 assert len(y_padded) == max_seq_length
                 targets.append(y_padded)
 
-        ltri = np.tril(np.ones([max_seq_length, max_seq_length]))
-        mask = ltri[self.seq_lengths - 1]
+        #ltri = np.tril(np.ones([max_seq_length, max_seq_length]))
+        #mask = ltri[self.seq_lengths - 1]
 
-        return np.array(inputs), np.array(targets), mask # TODO: check shape of these arrays
+        return np.array(inputs), np.array(targets), np.array(cur_seq_lengths) # TODO: check shape of these arrays
 
 
 class Preprocessor():
@@ -207,5 +209,5 @@ class Preprocessor():
         story_ids = []
         for story in storylist:
             prep_story_vec, seq_l = convert_text_data(story, self.word2id_dict, )
-            story_ids.append(prep_story_vec)  #-> list of lists of numpy-arrays, 1d, with word indices
+            story_ids.append(prep_story_vec)  #-> list of lists of lists
         return story_ids

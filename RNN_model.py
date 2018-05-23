@@ -9,12 +9,11 @@ class RNNModel():
         #self.sequence_length = rnn_config['sequence_length']
         self.hidden_size = rnn_config['hidden_size']
         self.vocab_size = rnn_config['vocab_size']
-        self.batch_size = rnn_config['batch_size']
-
             # Isnt't this missing a dimension?
         self.input_x = tf.placeholder(dtype=tf.int64, shape=[None, None], name="input_x") #self.sequence_length], name="input_x")
         self.input_y = tf.placeholder(dtype=tf.int64, shape=[None, None], name="input_y")#self.sequence_length], name="input_y")
         self.sequence_length_list = tf.placeholder(dtype=tf.int32, shape=[None,],name='sequence_length_list')
+        self.batch_size = tf.shape(self.input_x)[0]  # dynamic size#rnn_config['batch_size']
         self.max_seq_length = tf.shape(self.input_x)[1]  # dynamic size
         self.sequence_mask = tf.sequence_mask(self.sequence_length_list, None, dtype=tf.float32)
 
