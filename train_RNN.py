@@ -224,6 +224,8 @@ def generate(sess_path, cfg, contin_data,result_ptr,id2word_dict):
 
 
 
+
+
 # ------ Main ----- #
 
 def main(config):
@@ -241,6 +243,8 @@ def main(config):
     out_dir = train(model, config['rnn_config'], id2word_dict=prep.id2word_dict,
                     train_dataset=story_dataset_train, val_dataset=story_dataset_val)
         # TODO: modify train() to use story_dataset.get_batch()
+
+
 
 
 if __name__ == '__main__':

@@ -6,10 +6,15 @@ from utils import build_dict, convert_text_data
 
 # The classes StoryDataset and StoryFeeder are basically one thing together (could merge them some time)
 
+#
+# ! For the training set, the stories are always lists of five sentences (in the respective format).
+# ! For the validation set, they are lists of six sentences, and an attribute 'wrong_endings' specifies
+# ! whether the fifth or the sixth sentence is the correct last sentence.
+#
 
 class StoryDataset:
     '''
-    self.stories: A list of lists(5 sentences) of word lists
+    self.stories: A list of lists(5 sentences, or 6 if there are wrong endings) of word lists
     self.story_ids: A list of lists of numpy arrays of shape (sent_length x vocab_size)
     '''
     def __init__(self, stories=None, story_ids=None):
@@ -17,6 +22,7 @@ class StoryDataset:
         self.story_ids = story_ids
         self.story_keys = None   # metadata
         self.story_titles = None # metadata
+        self.wrong_endings = None # says whether the correct ending is the fifth sentence ("1") or the sixth ("2")
         self.feeder = None # Could have integrated Feeder into this class, but why bother now
 
     def preprocess(self, preprocessor):
@@ -34,17 +40,24 @@ class StoryDataset:
         assert self.feeder is not None
         return self.feeder.all_batches(shuffle=shuffle)
 
-    def get_data(self, indices):
+    def get_data(self, indices, id=True):
         ''' :param indices: a list of integers in range(0, data_size)
+            :param id:  if True, returned data consists of word indices,
+                        if False, return one list of sentences per story index
             :return: the corresponding batch'''
         assert np.all(0 <= indices) and np.all(indices < self.data_size)
-        return [self.story_ids[i] for i in indices]
+        if id:
+            return [self.story_ids[i] for i in indices]
+        else:
+            return [self.stories[i] for i in indices]
 
 
 
-def storydata_from_csv(path, batch_size, val_part=0.1):
+def storydata_from_csv(path, batch_size, val_part=0.1, has_titles=True, has_ending_labels=False):
     ''' batch_size: For creating the feeder for the training data part
-        val_part: how much of the data should be set as validation set'''
+        val_part: how much of the data should be set as validation set
+        has_titles: if True, treats the **second field** as titles
+        has_ending_labels: if True, expects integer labels in the **last field**'''
     ds_train = StoryDataset()
     ds_val = StoryDataset()
     stories_df = pd.read_csv(path, engine='python')
@@ -53,10 +66,16 @@ def storydata_from_csv(path, batch_size, val_part=0.1):
 
     # read in data
     ds_train.story_ids = stories_df.iloc[:,0].values[ : -n_val]
-    ds_val.story_ids = stories_df.iloc[:,0].values[ : -n_val]
-    ds_train.story_titles = stories_df.iloc[:,1].values[ -n_val : ]
-    ds_val.story_titles = stories_df.iloc[:,1].values[ -n_val : ]
-    story_mat = stories_df.iloc[:, 2:].values
+    ds_val.story_ids = stories_df.iloc[:,0].values[ -n_val : ]
+    if has_titles:
+        ds_train.story_titles = stories_df.iloc[:,1].values[ : -n_val ]
+        ds_val.story_titles   = stories_df.iloc[:,1].values[ -n_val : ]
+        stories_df.drop(stories_df.columns[1], axis=1, inplace=True)
+    if has_ending_labels:
+        ds_train.wrong_endings = stories_df.iloc[:,-1].values[ : -n_val ]
+        ds_val.wrong_endings   = stories_df.iloc[:,-1].values[ -n_val : ]
+        stories_df.drop(stories_df.columns[-1], axis=1, inplace=True)
+    story_mat = stories_df.iloc[:, 1:].values
     all_stories = []
 
     for story in story_mat:
@@ -92,14 +111,22 @@ class StoryFeeder:
         self.ids = np.arange(dataset.data_size)
         self.rngen.shuffle(self.ids_shuffled)
 
-    def get_batch(self, shuffle=True):
+    def get_batch(self, shuffle=True, return_raw=True):
+        ''' The returned batch contains the word indices of the current batch, one list per sentence per story.
+            batch contains: word indices, opt: raw sentences, opt: wrong story endings, opt: raw wrong story endings
+            :param return_raw: if True, add lists of raw sentences to output batch
+            '''
         all_ids = self.ids_shuffled if shuffle else self.ids
         ptr = self.batch_ptr * self.batch_size
         if self.batch_ptr == self.n_batches - 1:    #if there's not enough data left for a full batch
             ids = all_ids[ptr : ]
         else:
             ids = all_ids[ptr : ptr + self.batch_size]
-        return StoryBatch(story_ids=self.dataset.get_data(ids))
+        stories = None
+        wrong_endings = self.dataset.wrong_endings # could be None
+        if return_raw:
+            stories = self.dataset.get_data(ids, id=False)
+        return StoryBatch(story_ids=self.dataset.get_data(ids), stories=stories, wrong_endings=wrong_endings)
 
     def adv_batchptr(self):
         self.batch_ptr = self.batch_ptr + 1
@@ -124,8 +151,10 @@ class StoryFeeder:
 
 
 class StoryBatch():
-    def __init__(self, story_ids=None):
+    def __init__(self, story_ids=None, stories=None, wrong_endings=None):
         self._story_ids = story_ids
+        self._stories = stories
+        self._wrong_endings = wrong_endings
         self._mask = None
         self._seq_lengths = None # Lengths of every entire sequence, when concatenating all sentences of a story
 
@@ -146,16 +175,25 @@ class StoryBatch():
             self._seq_lengths = np.array([np.sum([len(sent) for sent in story]) for story in self.story_ids ])  # list of sequence lengths per batch entry
         return self._seq_lengths
 
+    ## No setters - don't modify a batch after creation
     @property   # the stories as lists of word-index-lists
     def story_ids(self):
         return self._story_ids
+    @property
+    def stories(self):
+        return self._stories
+    @property
+    def wrong_endings(self):
+        assert self._wrong_endings is not None, "Batch was created without raw wrong endings"
+        return self.wrong_endings
 
     def get_padded_data(self, which_sentences=[0,1,2,3,4], pad_target=True):
         """
+        Only for returning id lists.
         Pads the data with zeros, i.e. returns an np array of shape (batch_size, max_seq_length, dof). `max_seq_length`
         is the maximum occurring sequence length in the batch. Target is only padded if `pad_target` is True.
         :returns an 'input' consisting of the sentences given in :param which_sentences, concatenated to one list
-                 a 'target' which is the same sentence-group, but shifted by one
+                 a 'target' which is the same sentence-group, but shifted by one (not the correct classification of endings!)
                  a 'mask' which masks out padded entries
         """
         cur_seq_lengths = np.array([np.sum([len(story[i]) for i in which_sentences]) for story in self.story_ids])
