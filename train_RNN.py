@@ -67,7 +67,7 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
         checkpoint_dir = os.path.join(rnn_config['model_dir'],"checkpoints")
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-        saver = tf.train.Saver(tf.global_variables())
+        saver = tf.train.Saver(tf.global_variables(), max_to_keep=rnn_config['n_keep_checkpoints'])
 
         with open(os.path.join(rnn_config['model_dir'],'config.txt'),'w') as f:
             for item in rnn_config.items():
@@ -109,11 +109,13 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
             print("ep:", epoch, "valid_loss", valid_loss, flush=True)
             print("ep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)
             sys.stdout.flush()
-            # Could do / TODO: store model and delete old checkpoints in regular intervals
+            if (epoch + 1) % rnn_config['save_checkpoints_every_epoch'] == 0:
+                ckpt_path = saver.save(sess, checkpoint_dir+"_ep"+str(epoch)+"/", global_step)
+                print('Model saved to file {}'.format(ckpt_path))
             epoch += 1
-        checkpoint_path = saver.save(sess,checkpoint_dir,global_step=step)
-        print("Stored trained model at: \n"+checkpoint_path)
-    return checkpoint_path
+        ckpt_path = saver.save(sess,checkpoint_dir,global_step=step)
+        print("Stored trained model at: \n"+ckpt_path)
+    return ckpt_path
 
 def evaluate(sess_path, eva_data, result_ptr):
     data_x,data_y,length_list = eva_data
@@ -230,7 +232,7 @@ def generate(sess_path, cfg, contin_data,result_ptr,id2word_dict):
 # ------ Main ----- #
 
 def main(config):
-    train_file = os.path.join(config['data_dir'], "train_stories_sample.csv")
+    train_file = os.path.join(config['data_dir'], config['train_file'])
     story_dataset_train, story_dataset_val = \
         storydata_from_csv(train_file, config['rnn_config']['batch_size'], has_titles=True, has_ending_labels=False)
     prep = Preprocessor(config, dataset=story_dataset_train)
@@ -242,7 +244,7 @@ def main(config):
 #    out_dir = train(model, config['rnn_config'], id2word_dict=prep.id2word_dict,
 #                    train_dataset=story_dataset_train, val_dataset=story_dataset_val)
 
-    quiz_file = os.path.join(config['data_dir'], "cloze_test_val__spring2016.csv")
+    quiz_file = os.path.join(config['data_dir'], config['StoryCloze_file'])
     story_dataset_quiz_train, story_dataset_quiz_val = \
         storydata_from_csv(quiz_file, config['rnn_config']['batch_size'], has_titles=False, has_ending_labels=True)
     story_dataset_quiz_train.preprocess(prep)

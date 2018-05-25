@@ -105,6 +105,7 @@ venv.bak/
 
 #
 /p1/
+/embs/
 
 #pycharm
 .idea/
