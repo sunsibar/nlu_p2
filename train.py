@@ -3,12 +3,17 @@ Trains a full model
 '''
 
 
+
+
+
 def main(tconfig):
     pass
 
     # Load trained RNN model
 
-    # Build full_model on top of it
+    # Build full_model on top of it -- No: just use placeholders and
+    #   fill them with the right rnn features at runtime.
+    # Reason: need to calculate values (probabilities) from outputs for different inputs. Can't be done via a graph, except if you'd use three different models or such.
 
     # Load data
 

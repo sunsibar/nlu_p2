@@ -232,9 +232,9 @@ def generate(sess_path, cfg, contin_data,result_ptr,id2word_dict):
 # ------ Main ----- #
 
 def main(config):
-    train_file = os.path.join(config['data_dir'], config['train_file'])
+    train_data_file = os.path.join(config['data_dir'], config['train_data_file'])
     story_dataset_train, story_dataset_val = \
-        storydata_from_csv(train_file, config['rnn_config']['batch_size'], has_titles=True, has_ending_labels=False)
+        storydata_from_csv(train_data_file, config['rnn_config']['batch_size'], has_titles=True, has_ending_labels=False)
     prep = Preprocessor(config, dataset=story_dataset_train)
     story_dataset_train.preprocess(prep)
     story_dataset_val.preprocess(prep)
