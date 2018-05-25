@@ -98,7 +98,7 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
                                                              model.input_y: Y,
                                                              model.sequence_length_list: batch_seq_lengths})
                 train_summary_writer.add_summary(summary=summary, global_step=step)
-                print("ibatch", ib, "max loss",np.max(loss),end='', flush=True)
+                print("ibatch", ib, "max loss",np.max(loss),end='')
                 train_loss += loss
             # -- validate --
             val_allbatch = val_dataset.next_batch(shuffle=False)
