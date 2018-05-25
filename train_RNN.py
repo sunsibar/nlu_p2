@@ -239,16 +239,16 @@ def main(config):
     story_dataset_train.preprocess(prep)
     story_dataset_val.preprocess(prep)
 
-#    model = RNNModel(config['rnn_config'])
-#
-#    out_dir = train(model, config['rnn_config'], id2word_dict=prep.id2word_dict,
-#                    train_dataset=story_dataset_train, val_dataset=story_dataset_val)
+    model = RNNModel(config['rnn_config'])
 
-    quiz_file = os.path.join(config['data_dir'], config['StoryCloze_file'])
-    story_dataset_quiz_train, story_dataset_quiz_val = \
-        storydata_from_csv(quiz_file, config['rnn_config']['batch_size'], has_titles=False, has_ending_labels=True)
-    story_dataset_quiz_train.preprocess(prep)
-    story_dataset_quiz_val.preprocess(prep)
+    out_dir = train(model, config['rnn_config'], id2word_dict=prep.id2word_dict,
+                    train_dataset=story_dataset_train, val_dataset=story_dataset_val)
+
+#    quiz_file = os.path.join(config['data_dir'], config['StoryCloze_file'])
+#    story_dataset_quiz_train, story_dataset_quiz_val = \
+#        storydata_from_csv(quiz_file, config['rnn_config']['batch_size'], has_titles=False, has_ending_labels=True)
+#    story_dataset_quiz_train.preprocess(prep)
+#    story_dataset_quiz_val.preprocess(prep)
 
 
 
