@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import re
 from utils import build_dict, convert_text_data
-
+import nltk
 
 # The classes StoryDataset and StoryFeeder are basically one thing together (could merge them some time)
 
@@ -81,11 +81,12 @@ def storydata_from_csv(path, batch_size, val_part=0.1, has_titles=True, has_endi
     for story in story_mat:
         sentences = []
         for sentence in story:
-            token = sentence.lower()
-            token = re.sub(r"[?!.,';\":]", r" \g<0> ", token) # pad special signs with spaces
-            token = token.strip().split(' ')
-            token = filter(None, token)
-            sentences.append(list(token))
+            # token = sentence.lower()
+            # token = re.sub(r"[?!.,';\":]", r" \g<0> ", token) # pad special signs with spaces
+            # token = token.strip().split(' ')
+            # token = filter(None, token)
+            # sentences.append(list(token))
+            sentences.append(nltk.word_tokenize(sentence))
         all_stories.append(sentences)
     ds_train.stories = all_stories[ : -n_val]
     ds_val.stories   = all_stories[-n_val : ]

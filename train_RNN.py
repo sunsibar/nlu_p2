@@ -7,6 +7,7 @@ Train the RNN to reuse it in full model
 import numpy as np
 import tensorflow as tf
 import gensim
+import nltk
 import time
 import os
 import glob
@@ -230,20 +231,22 @@ def generate(sess_path, cfg, contin_data,result_ptr,id2word_dict):
 
 def main(config):
     train_file = os.path.join(config['data_dir'], "train_stories_sample.csv")
-    story_dataset_train, story_dataset_val = storydata_from_csv(train_file, config['rnn_config']['batch_size'])
+    story_dataset_train, story_dataset_val = \
+        storydata_from_csv(train_file, config['rnn_config']['batch_size'], has_titles=True, has_ending_labels=False)
     prep = Preprocessor(config, dataset=story_dataset_train)
     story_dataset_train.preprocess(prep)
     story_dataset_val.preprocess(prep)
 
+#    model = RNNModel(config['rnn_config'])
+#
+#    out_dir = train(model, config['rnn_config'], id2word_dict=prep.id2word_dict,
+#                    train_dataset=story_dataset_train, val_dataset=story_dataset_val)
 
-    #train_batch_data = get_batch_data(train_data, batch_size=config['batch_size'])
-
-    model = RNNModel(config['rnn_config'])
-
-    out_dir = train(model, config['rnn_config'], id2word_dict=prep.id2word_dict,
-                    train_dataset=story_dataset_train, val_dataset=story_dataset_val)
-        # TODO: modify train() to use story_dataset.get_batch()
-
+    quiz_file = os.path.join(config['data_dir'], "cloze_test_val__spring2016.csv")
+    story_dataset_quiz_train, story_dataset_quiz_val = \
+        storydata_from_csv(quiz_file, config['rnn_config']['batch_size'], has_titles=False, has_ending_labels=True)
+    story_dataset_quiz_train.preprocess(prep)
+    story_dataset_quiz_val.preprocess(prep)
 
 
 
