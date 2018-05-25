@@ -67,7 +67,7 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
         checkpoint_dir = os.path.join(rnn_config['model_dir'],"checkpoints")
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-        saver = tf.train.Saver(tf.global_variables())
+        saver = tf.train.Saver(tf.global_variables(), max_to_keep=config['n_keep_checkpoints'])
 
         with open(os.path.join(rnn_config['model_dir'],'config.txt'),'w') as f:
             for item in rnn_config.items():
@@ -109,11 +109,13 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
             print("ep:", epoch, "valid_loss", valid_loss, flush=True)
             print("ep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)
             sys.stdout.flush()
-            # Could do / TODO: store model and delete old checkpoints in regular intervals
+            if (epoch + 1) % rnn_config['save_checkpoints_every_epoch'] == 0:
+                ckpt_path = saver.save(sess, checkpoint_dir+"_ep"+str(epoch)+"/", global_step)
+                print('Model saved to file {}'.format(ckpt_path))
             epoch += 1
-        checkpoint_path = saver.save(sess,checkpoint_dir,global_step=step)
-        print("Stored trained model at: \n"+checkpoint_path)
-    return checkpoint_path
+        ckpt_path = saver.save(sess,checkpoint_dir,global_step=step)
+        print("Stored trained model at: \n"+ckpt_path)
+    return ckpt_path
 
 def evaluate(sess_path, eva_data, result_ptr):
     data_x,data_y,length_list = eva_data
