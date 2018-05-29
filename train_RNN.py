@@ -92,11 +92,10 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
         while epoch < num_epochs:
             train_loss = 0
             for ib, ibatch in enumerate(train_dataset.all_batches(shuffle=True)):
-                X, Y, batch_seq_lengths = ibatch.get_padded_data()
+                #X, Y, batch_seq_lengths = ibatch.get_padded_data()
+                feed_dict = model.get_feed_dict_train(ibatch)
                 _, summary, step, loss = sess.run([train_op, train_summary_op, global_step, model.print_perplexity],
-                                                    feed_dict={model.input_x: X,
-                                                             model.input_y: Y,
-                                                             model.sequence_length_list: batch_seq_lengths})
+                                                    feed_dict=feed_dict)
                 train_summary_writer.add_summary(summary=summary, global_step=step)
                 print("ibatch", ib, "max loss",np.max(loss),end='')
                 train_loss += loss

@@ -9,7 +9,7 @@ class RNNModel():
         #self.sequence_length = rnn_config['sequence_length']
         self.hidden_size = rnn_config['hidden_size']
         self.vocab_size = rnn_config['vocab_size']
-            # Isnt't this missing a dimension?
+        # Isnt't this missing a dimension?
         self.input_x = tf.placeholder(dtype=tf.int64, shape=[None, None], name="input_x") #self.sequence_length], name="input_x")
         self.input_y = tf.placeholder(dtype=tf.int64, shape=[None, None], name="input_y")#self.sequence_length], name="input_y")
         self.sequence_length_list = tf.placeholder(dtype=tf.int32, shape=[None,],name='sequence_length_list')
@@ -41,7 +41,7 @@ class RNNModel():
         else:
             self.outputs = tf.reshape(outputs,[-1,self.hidden_size])  # shape: (batch_size*time_step, self.hidden_size)
         self.W_out = tf.get_variable("W_out", shape=[self.hidden_size, self.vocab_size],
-                                initializer=tf.contrib.layers.xavier_initializer())
+                                     initializer=tf.contrib.layers.xavier_initializer())
         self.b_out = tf.Variable(tf.constant(0.1, shape=[self.vocab_size,]), name='b_out')
 
         logits = tf.nn.xw_plus_b(self.outputs,self.W_out, self.b_out)   # TODO: check the replacement works (of self.seq_length -> self.max_seq_length
@@ -49,14 +49,43 @@ class RNNModel():
         self.logits = tf.transpose(logits, perm=[1, 0, 2])
         self.prediction = tf.argmax(logits, 1, name='prediction')
         self.loss = tf.contrib.seq2seq.sequence_loss(
-                            self.logits,
-                            self.input_y,
-                            self.sequence_mask,
-                            average_across_timesteps=True,
-                            average_across_batch=False,name="loss")
+            self.logits,
+            self.input_y,
+            self.sequence_mask,
+            average_across_timesteps=True,
+            average_across_batch=False,name="loss")
 
         self.eva_perplexity = tf.exp(self.loss, name="eva_perplexity")
         self.minimize_loss = tf.reduce_mean(self.loss,name="minize_loss")
         self.print_perplexity = tf.reduce_mean(self.eva_perplexity, name="print_perplexity")
 
+        self.word_probabs = tf.exp(- tf.contrib.seq2seq.sequence_loss(
+            self.logits,
+            self.input_y,
+            self.sequence_mask,
+            average_across_timesteps=False,
+            average_across_batch=False,name="log_word_prob"))
         self.sequence_probab = 1. / self.eva_perplexity
+
+
+
+    def get_feed_dict_train(self, batch):
+        '''batch --> feed_dict for training'''
+        X, Y, batch_seq_lengths = batch.get_padded_data()
+        feed_dict = {self.input_x: X,
+                     self.input_y: Y,
+                     self.sequence_length_list: batch_seq_lengths}
+        return feed_dict
+
+
+    def get_feed_dict_infer(self, batch, which_sentences=None):
+        '''batch --> feed_dict for training'''
+        if which_sentences is None:
+            which_sentences = range(batch.get_batchsize())
+        X, _, batch_seq_lengths = batch.get_padded_data(which_sentences=which_sentences,
+                                                        use_next_step_as_target=False, pad_target=False)
+        feed_dict = {self.input_x: X,
+                     self.sequence_length_list: batch_seq_lengths}
+        return feed_dict
+
+

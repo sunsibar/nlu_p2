@@ -155,9 +155,26 @@ class StoryBatch():
     def __init__(self, story_ids=None, stories=None, wrong_endings=None):
         self._story_ids = story_ids
         self._stories = stories
-        self._wrong_endings = wrong_endings
+        self._wrong_endings = wrong_endings # a batch-size-sized list of '1's and '2's, indicating whether the fifth or the sixth sentence is the correct ending
         self._mask = None
         self._seq_lengths = None # Lengths of every entire sequence, when concatenating all sentences of a story
+        self._target_ids = None
+
+ #   @classmethod
+ #   def create_with_next_word_target(cls, story_ids, stories=None, wrong_endings=None):
+ #       sbatch = cls()
+ #       sbatch._story_ids = story_ids
+ #       sbatch._stories = stories
+ #       sbatch._wrong_endings = wrong_endings
+ #       sbatch._mask = None
+ #       sbatch._seq_lengths = None # Lengths of every entire sequence, when concatenating all sentences of a story
+
+
+
+#    @classmethod
+#    def with_target(cls, story_ids, target_ids, wrong_endings=None):
+#        raise NotImplementedError
+
 
    # def mask(self):
    ##     """
@@ -176,6 +193,25 @@ class StoryBatch():
             self._seq_lengths = np.array([np.sum([len(sent) for sent in story]) for story in self.story_ids ])  # list of sequence lengths per batch entry
         return self._seq_lengths
 
+    @property
+    def batchsize(self):
+        if self.story_ids is not None:
+            return len(self.story_ids)
+        elif self.stories is not None:
+            return len(self.stories)
+        else:
+            assert self._wrong_endings is None, "Error: Found batch with only wrong ending labels, but no data"
+            return 0
+
+    def sent_len(self, sent_idx):
+        ''' for each story in the batch, return the number of tokens (~words) in the sent_idx'th sentence'''
+        return [len(story[sent_idx]) for story in self.story_ids]
+
+    def sents_len(self, sent_idces):
+        '''For each story in the batch, return the combined length of the senteces indexed by sent_idces.'''
+        return np.sum(np.array([self.sent_len(sent_idx) for sent_idx in sent_idces]), axis=1)
+
+
     ## No setters - don't modify a batch after creation
     @property   # the stories as lists of word-index-lists
     def story_ids(self):
@@ -188,25 +224,32 @@ class StoryBatch():
         assert self._wrong_endings is not None, "Batch was created without raw wrong endings"
         return self.wrong_endings
 
-    def get_padded_data(self, which_sentences=[0,1,2,3,4], pad_target=True):
+    def get_padded_data(self, which_sentences=[0,1,2,3,4], use_next_step_as_target=True, pad_target=True):
         """
         Only for returning id lists.
         Pads the data with zeros, i.e. returns an np array of shape (batch_size, max_seq_length, dof). `max_seq_length`
         is the maximum occurring sequence length in the batch. Target is only padded if `pad_target` is True.
         :returns an 'input' consisting of the sentences given in :param which_sentences, concatenated to one list
                  a 'target' which is the same sentence-group, but shifted by one (not the correct classification of endings!)
+                 - 'target' can be a 'None'-np.array if not use_next_step_as_target
                  a 'mask' which masks out padded entries
         """
+        assert not pad_target or use_next_step_as_target # if pad_target, make sure there is a target to pad
         cur_seq_lengths = np.array([np.sum([len(story[i]) for i in which_sentences]) for story in self.story_ids])
         max_seq_length = max(cur_seq_lengths)
+        if use_next_step_as_target:
+            max_seq_length = max_seq_length - 1 # remove last step because it doesn't have a target
 
         inputs = []
         targets = []
-        for something in self._story_ids:
-            X = [something[i] for i in which_sentences]
-            X = np.concatenate(X)[ : -1]
-            Y = [something[i] for i in which_sentences]
-            Y = np.concatenate(Y)[ 1 : ]
+        for this_storys_ids in self._story_ids:
+            X = [this_storys_ids[i] for i in which_sentences]
+            X = np.concatenate(X)
+            Y = None
+            if use_next_step_as_target:
+                X = X[ : -1]
+                Y = [this_storys_ids[i] for i in which_sentences]
+                Y = np.concatenate(Y)[ 1 : ]
             missing = max_seq_length - X.shape[0]
             x_padded, y_padded = X, Y
             if missing > 0:
@@ -225,6 +268,12 @@ class StoryBatch():
         #mask = ltri[self.seq_lengths - 1]
 
         return np.array(inputs), np.array(targets), np.array(cur_seq_lengths) # TODO: check shape of these arrays
+
+
+
+    def get_ending_labels(self):
+        assert self._wrong_endings is not None
+        raise NotImplementedError
 
 
 class Preprocessor():
