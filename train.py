@@ -112,14 +112,31 @@ def main(config, valid_config):
                 with classifier_graph.as_default():
                     # get the target labels
                     # train the model
+
                     pass
 
+
+            for i, batch in enumerate(dataset_val.all_batches()):
+                loss_valid = 0.
+
+                with rnn_graph.as_default():
+                    features = get_features(batch, config['static_features'], config['use_rnn'], rnn_sess, rnn)
+
+                with classifier_graph.as_default():
+                    pass
+
+            if (e + 1) % config['save_checkpoints_every_epoch'] == 0:
+                with classifier_graph.as_default():
+                    ckpt_path = saver.save(sess, config['model_dir'] + "/ep"+str(e+1), global_step)
+                    print("Model saved to: "+ ckpt_path)
 
 
 
     finally:
         if config['use_rnn']:
-            saver.save(sess, config['output_dir'], global_step=None) # TODO
+            with classifier_graph.as_default():
+                saver.save(sess, config['model_dir'] + "/ep"+str(e+1), global_step)
+                print("Finishing; model saved to: "+ ckpt_path )
             sess.close()
             rnn_sess.close()
 
