@@ -44,7 +44,7 @@ class RNNModel():
                                      initializer=tf.contrib.layers.xavier_initializer())
         self.b_out = tf.Variable(tf.constant(0.1, shape=[self.vocab_size,]), name='b_out')
 
-        logits = tf.nn.xw_plus_b(self.outputs,self.W_out, self.b_out)   # TODO: check the replacement works (of self.seq_length -> self.max_seq_length
+        logits = tf.nn.xw_plus_b(self.outputs, self.W_out, self.b_out)   # TODO: check the replacement works (of self.seq_length -> self.max_seq_length
         logits = tf.reshape(logits, shape=[self.max_seq_length, -1, self.vocab_size])  # (time_step,batch_size,vocab_size)
         self.logits = tf.transpose(logits, perm=[1, 0, 2])
         self.prediction = tf.argmax(logits, 1, name='prediction')

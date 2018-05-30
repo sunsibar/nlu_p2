@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     filepath = '../../data/'
     file = os.path.join(filepath, 'team_30.csv')
-    line_number_start = 87 - 1
+    line_number_start = 111 - 1
     line_number_end = 120 - 1
 
     team_30_dataframe = pd.read_csv(file)
@@ -53,4 +53,4 @@ if __name__ == "__main__":
 
     #result = pd.concat([newdataframe, wrongs, rights], axis=1)
 
-    print("hello")
+    print("finito")

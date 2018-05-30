@@ -46,12 +46,12 @@ config = {}
 config['data_dir'] = '../data'
 config['output_dir'] = '../trained_models/full'
 config['train_data_file'] = 'train_stories.csv'
-#config['train_file'] = 'train_stories_sample.csv'
+#config['train_data_file'] = 'train_stories_sample.csv'
 config['story_cloze_file'] = 'cloze_test_val__spring2016.csv'
 config['mode'] = 'training' # one of 'training', 'validation', 'inference'
 config['rnn_config'] = rnn_config
 config['static_features'] = static_features
-config['max_sentence_length'] = 30 # in words, including special tokens and sentence endings ## TODO: unused so far...
+#config['max_sentence_length'] = 30 # in words, including special tokens and sentence endings ## TODO: unused so far...
 config['vocab_size'] = rnn_config['vocab_size'] = 20000
 config['limit_num_samples'] = 20   # Unused ; None, or a positive number to reduce the number of samples during training
 

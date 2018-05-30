@@ -237,8 +237,9 @@ class StoryBatch():
         assert not pad_target or use_next_step_as_target # if pad_target, make sure there is a target to pad
         cur_seq_lengths = np.array([np.sum([len(story[i]) for i in which_sentences]) for story in self.story_ids])
         max_seq_length = max(cur_seq_lengths)
-        if use_next_step_as_target:
-            max_seq_length = max_seq_length - 1 # remove last step because it doesn't have a target
+        # Not-TODO: Evil! Do *not* uncomment the next two lines. (Why is this the max seq length?)
+       # if use_next_step_as_target:
+       #     max_seq_length = max_seq_length - 1 # remove last step because it doesn't have a target
 
         inputs = []
         targets = []
@@ -278,7 +279,7 @@ class StoryBatch():
 
 class Preprocessor():
     def __init__(self, config, dataset=None):
-        self.max_sentence_length = config['max_sentence_length']
+        #self.max_sentence_length = config['max_sentence_length']
         self.vocab_size = config['vocab_size']
         self.word2id_dict = None
         self.id2word_dict = None

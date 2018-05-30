@@ -97,7 +97,7 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
                 _, summary, step, loss = sess.run([train_op, train_summary_op, global_step, model.print_perplexity],
                                                     feed_dict=feed_dict)
                 train_summary_writer.add_summary(summary=summary, global_step=step)
-                print("ibatch", ib, "max loss",np.max(loss),end='')
+                print('\ribatch {:d}, max loss {:f}'.format(ib, np.max(loss)), end='')
                 train_loss += loss
             # -- validate --
             val_allbatch = val_dataset.next_batch(shuffle=False)
@@ -105,8 +105,8 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
             valid_loss = sess.run([model.print_perplexity], feed_dict={model.input_x: X_v,
                                                                        model.input_y: Y_v,
                                                                        model.sequence_length_list: val_seq_lengths})[0]
+            print("\nep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)
             print("ep:", epoch, "valid_loss", valid_loss, flush=True)
-            print("ep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)
             sys.stdout.flush()
             if (epoch + 1) % rnn_config['save_checkpoints_every_epoch'] == 0:
                 ckpt_path = saver.save(sess, checkpoint_dir+"_ep"+str(epoch)+"/", global_step)
