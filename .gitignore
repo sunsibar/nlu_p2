@@ -107,5 +107,9 @@ venv.bak/
 /p1/
 /embs/
 
+# logs from euler
+lsf.*
+
 #pycharm
 .idea/
+

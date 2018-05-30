@@ -19,10 +19,10 @@ def get_rnn_model_and_placeholders(rnn_config):
                     'rnn_target_pl': target_pl,
                     'seq_lengths_pl': seq_lengths_pl}
 
-    if rnn_config['model'] =="simple":
+    if rnn_config['model_type'] =="simple":
         rnn_model_class = RNNModel
     else:
-        raise KeyError('Unknown model: '+rnn_config['model'])
+        raise KeyError('Unknown model: '+rnn_config['model_type'])
     return rnn_model_class, placeholders
 
 
@@ -32,15 +32,24 @@ def get_model_and_placeholders(config):
     #input_rnn_probab_pl = tf.placeholder(tf.float32, shape=[None, None], name='input_rnn_probab_pl')
     target_pl = tf.placeholder(tf.float32, shape=[None], name='output_pl')
     #seq_lengths_pl = tf.placeholder(dtype=tf.int32, shape=[None,],name='sequence_length_list')
-    _, rnn_placeholders = get_rnn_model_and_placeholders(config.rnn_config)
+    _, rnn_placeholders = get_rnn_model_and_placeholders(config['rnn_config'])
 
     placeholders = {'input_pl': input_pl,
                     #'input_rnn_pl': input_rnn_probab_pl,
                     'target_pl': target_pl}
     placeholders_combined = {**placeholders, **rnn_placeholders}
 
-    if config['model'] =="simple":
+    if config['model_type'] =="simple":
         model_class = SimpleEndingClassifier
     else:
-        raise KeyError('Unknown model: '+config['model'])
+        raise KeyError('Unknown model: '+config['model_type'])
     return model_class, placeholders_combined
+
+
+
+def get_rnn_model(rnn_config):
+    if rnn_config['model_type'] =="simple":
+        rnn_model_class = RNNModel
+    else:
+        raise KeyError('Unknown model: '+rnn_config['model_type'])
+    return rnn_model_class

@@ -18,7 +18,7 @@ from RNN_model import RNNModel
 from dataset import StoryDataset, storydata_from_csv, Preprocessor
 
 def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
-    assert val_dataset.data_size == val_dataset.feeder.batch_size, "It's stupid to not evaluate on all validation data at once"
+    #assert val_dataset.data_size == val_dataset.feeder.batch_size
 
     learning_rate = rnn_config['learning_rate']
     is_use_embedding = rnn_config['is_use_embedding']
@@ -100,9 +100,11 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
                 print('\ribatch {:d}, max loss {:f}'.format(ib, np.max(loss)), end='')
                 train_loss += loss
             # -- validate --
-            val_allbatch = val_dataset.next_batch(shuffle=False)
-            X_v, Y_v, val_seq_lengths = val_allbatch.get_padded_data()
-            valid_loss = sess.run([model.print_perplexity], feed_dict={model.input_x: X_v,
+            valid_loss = 0.
+            for ib, ibatch in enumerate(val_dataset.all_batches()):
+            #val_allbatch = val_dataset.next_batch(shuffle=False)
+                X_v, Y_v, val_seq_lengths = ibatch.get_padded_data()
+                valid_loss += sess.run([model.print_perplexity], feed_dict={model.input_x: X_v,
                                                                        model.input_y: Y_v,
                                                                        model.sequence_length_list: val_seq_lengths})[0]
             print("\nep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)

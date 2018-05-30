@@ -40,6 +40,10 @@ class StoryDataset:
         assert self.feeder is not None
         return self.feeder.all_batches(shuffle=shuffle)
 
+    def get_batch(self, shuffle=True, return_raw=True):
+        assert self.feeder is not None
+        return self.feeder.get_batch(shuffle=shuffle, return_raw=return_raw)
+
     def get_data(self, indices, id=True):
         ''' :param indices: a list of integers in range(0, data_size)
             :param id:  if True, returned data consists of word indices,
@@ -92,7 +96,7 @@ def storydata_from_csv(path, batch_size, val_part=0.1, has_titles=True, has_endi
     ds_val.stories   = all_stories[-n_val : ]
 
     ds_train.feeder = StoryFeeder(ds_train, batch_size)
-    ds_val.feeder = StoryFeeder(ds_val, ds_val.data_size)
+    ds_val.feeder = StoryFeeder(ds_val, batch_size) # just use the same size
 
     print("Loaded "+str(ds_train.data_size)+" training stories and " +str(ds_val.data_size)+
           " validation stories from "+path)
@@ -160,21 +164,6 @@ class StoryBatch():
         self._seq_lengths = None # Lengths of every entire sequence, when concatenating all sentences of a story
         self._target_ids = None
 
- #   @classmethod
- #   def create_with_next_word_target(cls, story_ids, stories=None, wrong_endings=None):
- #       sbatch = cls()
- #       sbatch._story_ids = story_ids
- #       sbatch._stories = stories
- #       sbatch._wrong_endings = wrong_endings
- #       sbatch._mask = None
- #       sbatch._seq_lengths = None # Lengths of every entire sequence, when concatenating all sentences of a story
-
-
-
-#    @classmethod
-#    def with_target(cls, story_ids, target_ids, wrong_endings=None):
-#        raise NotImplementedError
-
 
    # def mask(self):
    ##     """
@@ -211,6 +200,11 @@ class StoryBatch():
         '''For each story in the batch, return the combined length of the senteces indexed by sent_idces.'''
         return np.sum(np.array([self.sent_len(sent_idx) for sent_idx in sent_idces]), axis=1)
 
+    def num_sentences(self):
+        num = len(self.story_ids[0]) # num of sentences in first story
+        for story in self.story_ids:
+            assert len(story) == num, "Error: number of sentences is not defined for this batch, because it varies."
+        return num
 
     ## No setters - don't modify a batch after creation
     @property   # the stories as lists of word-index-lists

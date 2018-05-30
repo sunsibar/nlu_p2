@@ -6,8 +6,8 @@ import numpy as np
 import tensorflow as tf
 from RNN_model import RNNModel
 from dataset import storydata_from_csv, Preprocessor
-from train_utils import get_model_and_placeholders
-from full_model import SimpleEndingClassifier
+from train_utils import get_rnn_model
+from full_model import SimpleEndingClassifier, BinaryLogisticClassifier, get_features
 
 
 
@@ -22,7 +22,7 @@ def set_up_datasets(config):
     #   story_dataset_train.preprocess(prep)
     #   story_dataset_val.preprocess(prep)
 
-    quiz_file = os.path.join(config['data_dir'], config['StoryCloze_file'])
+    quiz_file = os.path.join(config['data_dir'], config['story_cloze_file'])
     story_dataset_quiz_train, story_dataset_quiz_val = \
         storydata_from_csv(quiz_file, config['rnn_config']['batch_size'],
                            has_titles=False, has_ending_labels=True)
@@ -36,33 +36,41 @@ def set_up_datasets(config):
 def main(config):
 
     dataset_train, dataset_val = set_up_datasets(config)
+    sample_batch = dataset_train.get_batch() #does not advance batch pointer
 
-    rnn_model_cls, placeholders = get_model_and_placeholders(config)
-    classifier = SimpleEndingClassifier(config, placeholders, use_rnn=config['use_rnn'])
-
-    # Load trained RNN model
     rnn = sess = saver = None
     if config['use_rnn']:
+        rnn_model_cls = get_rnn_model(config['rnn_config'])
         rnn = rnn_model_cls(config['rnn_config'])
-        sess = tf.Session()
-        saver = tf.train.Saver()
 
-        ckpt_id = config['rnn_checkpoint_id']
+    classifier = SimpleEndingClassifier(config, use_rnn=config['use_rnn'])
+    classifier.build_model()
+
+    sess = tf.Session()
+    saver = tf.train.Saver()
+
+    # Load trained RNN model weights
+    if config['use_rnn']:
+        ckpt_id = config['rnn_model_id']
         if ckpt_id is None:
             ckpt_path = tf.train.latest_checkpoint(config['rnn_model_dir'])
         else:
             ckpt_path = os.path.join(os.path.abspath(config['rnn_model_dir']), ckpt_id)
-        print('Evaluating ' + ckpt_path)
         saver.restore(sess, ckpt_path)
+        print('Loaded RNN weights from ' + ckpt_path)
 
     try:
+        pass
         # Build full_model "on top" of it
 
 
         # For each batch of data, do:
 
-        # Get the classifications from the model
-        # results.append((index where probab is higher) + 1) --> "1" or "2"
+        # get static and RNN features from the batch
+
+        # get the target labels
+
+        # train the model
 
 
 
