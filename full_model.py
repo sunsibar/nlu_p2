@@ -5,10 +5,10 @@ on top of them.
 import numpy as np
 import tensorflow as tf
 
-class SimpleEndingClassifier:
+class BinaryLogisticClassifier:
     ''' Uses binary logistic regression'''
 
-    def __init__(self, config, use_rnn=True, num_features=None):
+    def __init__(self, config, use_rnn=True):#, num_features=None):
         self.config = config
         self.use_rnn = use_rnn
         self.data_dir = config['data_dir']
@@ -21,15 +21,28 @@ class SimpleEndingClassifier:
         self.vocab_size = config['vocab_size']
         self.limit_num_samples = config['limit_num_samples'] = 20  # Unused ?
 
-        self._num_features = num_features
+        self._num_features = None #num_features
 
         self.reuse = True if self.mode == 'validation' else False # have two models in parallel, on training, one validation; same weights
 
-        self.binlog_classifier = BinaryLogisticClassifier(self.mode, self.num_features)
+        #self.binlog_classifier = BinaryLogisticClassifier(self.mode, self.num_features)
+
+        self.inputs = tf.placeholder(tf.float32, shape=[None, self.num_features], name='input_pl')
+        self.targets = tf.placeholder(tf.int32, shape=[None,], name='target_pl')
+
+        self.reuse = True if self.mode == 'validation' else False  # have two models in parallel, on training, one validation; same weights
 
 
-    def build_model(self):
-        self.binlog_classifier.build_model()
+    def build_graph(self):
+
+        with tf.variable_scope('binary_logistic_classifier', reuse=self.reuse):
+            self.logit_1 = tf.contrib.layers.fully_connected(self.inputs, 1, activation_fn=None)
+            if self.mode is not 'inference':
+                self.loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.targets, logits=self.logit_1)
+            self.logit_2 = tf.fill(tf.shape(self.logit_1), 1.)
+            self.logits = tf.concat([self.logit_1, self.logit_2], axis= 1)
+            self.predictions = tf.argmax(self.logits, axis=1)
+            self.predictions += tf.ones_like(self.predictions)
 
 
 
@@ -45,17 +58,17 @@ class SimpleEndingClassifier:
         pass
 
 
-    @property
-    def inputs(self):
-        return self.binlog_classifier.inputs
-
-    @inputs.setter
-    def inputs(self, value):
-        self.binlog_classifier.inputs = value
-
-    @property
-    def predictions(self):
-        return self.binlog_classifier.predictions
+    # @property
+    # def inputs(self):
+    #     return self.binlog_classifier.inputs
+    #
+    # @inputs.setter
+    # def inputs(self, value):
+    #     self.binlog_classifier.inputs = value
+    #
+    # @property
+    # def predictions(self):
+    #     return self.binlog_classifier.predictions
 
     @property
     def num_features(self, num_sentences=6):
@@ -140,27 +153,30 @@ def get_RNN_features(self, sess, rnn, batch):
         return probabs
 
 
-class BinaryLogisticClassifier:
-    ''' Tries to predict a 1 or a 2 from the input.
-        Very simple; storage and such are left to the caller.'''
-
-    def __init__(self, mode, num_features):
-        self.mode = mode
-        assert self.mode in ['training', 'validation', 'inference']
-        self.inputs = tf.placeholder(tf.float32, shape=[None, num_features], name='input_pl')
-        self.targets = tf.placeholder(tf.int32, shape=[None,], name='target_pl')
-
-        self.reuse = True if self.mode == 'validation' else False  # have two models in parallel, on training, one validation; same weights
-
-    def build_model(self):
-
-        with tf.variable_scope('binary_logistic_classifier', reuse=self.reuse):
-            self.logit_1 = tf.contrib.layers.fully_connected(self.inputs, 1, activation_fn=None)
-            if self.mode is not 'inference':
-                self.loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.targets, logits=self.logit_1)
-            self.logit_2 = tf.fill(tf.shape(self.logit_1), 1.)
-            self.logits = tf.concat([self.logit_1, self.logit_2], axis= 1)
-            self.predictions = tf.argmax(self.logits, axis=1)
-            self.predictions += tf.ones_like(self.predictions)
-            #self.predictions = tf.less(self.logit_1, 1.)
-            #tf.argmax(self.logits, axis=1) + tf.constant(1, shape=(self.logits.shape[0]))
+# class BinaryLogisticClassifier:
+#     ''' Tries to predict a 1 or a 2 from the input.
+#         Very simple; storage and such are left to the caller.'''
+#
+#     def __init__(self, mode, num_features):
+#         self.mode = mode
+#         assert self.mode in ['training', 'validation', 'inference']
+#         self.inputs = tf.placeholder(tf.float32, shape=[None, num_features], name='input_pl')
+#         self.targets = tf.placeholder(tf.int32, shape=[None,], name='target_pl')
+#
+#         self.reuse = True if self.mode == 'validation' else False  # have two models in parallel, on training, one validation; same weights
+#
+#
+#
+#
+#     def build_graph(self):
+#
+#         with tf.variable_scope('binary_logistic_classifier', reuse=self.reuse):
+#             self.logit_1 = tf.contrib.layers.fully_connected(self.inputs, 1, activation_fn=None)
+#             if self.mode is not 'inference':
+#                 self.loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.targets, logits=self.logit_1)
+#             self.logit_2 = tf.fill(tf.shape(self.logit_1), 1.)
+#             self.logits = tf.concat([self.logit_1, self.logit_2], axis= 1)
+#             self.predictions = tf.argmax(self.logits, axis=1)
+#             self.predictions += tf.ones_like(self.predictions)
+#             #self.predictions = tf.less(self.logit_1, 1.)
+#             #tf.argmax(self.logits, axis=1) + tf.constant(1, shape=(self.logits.shape[0]))

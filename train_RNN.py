@@ -68,7 +68,7 @@ def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
 
-        saver = tf.train.Saver(tf.global_variables(), max_to_keep=rnn_config['n_keep_checkpoints'])
+        saver = tf.train.Saver(tf.global_variables(), max_to_keep=rnn_config['n_checkpoints_to_keep'])
         with open(os.path.join(rnn_config['model_dir'],'config.txt'),'w') as f:
             for item in rnn_config.items():
                 f.write(str(item))

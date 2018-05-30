@@ -1,7 +1,7 @@
 
 import tensorflow as tf
 from RNN_model import RNNModel
-from full_model import SimpleEndingClassifier
+from full_model import BinaryLogisticClassifier
 
 # Do this outside of the network, to guarantee that every rnn model uses the same placeholders.
 # Then, train.py can generically train all rnns (hopefully).
@@ -40,7 +40,7 @@ def get_model_and_placeholders(config):
     placeholders_combined = {**placeholders, **rnn_placeholders}
 
     if config['model_type'] =="simple":
-        model_class = SimpleEndingClassifier
+        model_class = BinaryLogisticClassifier
     else:
         raise KeyError('Unknown model: '+config['model_type'])
     return model_class, placeholders_combined
