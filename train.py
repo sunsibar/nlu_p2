@@ -12,6 +12,8 @@ from train_utils import get_rnn_model
 from full_model import BinaryLogisticClassifier, get_features
 import datetime
 
+## TODO: add summaries 
+
 
 # ---  set up datasets --- #
 def set_up_datasets(config):
@@ -99,10 +101,10 @@ def main(config, valid_config):
 
         # start training
         start_time = time.time()
-        train_loss = 0.
         for e in range(config['num_epochs']):
             step = tf.train.global_step(sess, global_step)
 
+            train_loss = 0.
             for i, batch in enumerate(dataset_train.all_batches(shuffle=True)):
                 # For each batch of data, do:
 
