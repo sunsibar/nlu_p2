@@ -61,7 +61,7 @@ def main(config, valid_config):
         with rnn_graph.as_default():
             rnn_model_cls = get_rnn_model(config['rnn_config'])
             rnn = rnn_model_cls(config['rnn_config'])
-            saver_rnn = tf.Saver()#tf.train.import_meta_graph(ckpt_path + ".meta")
+            saver_rnn = tf.train.Saver()#tf.train.import_meta_graph(ckpt_path + ".meta")
             rnn_sess = tf.Session()
             saver_rnn.restore(rnn_sess, ckpt_path)
             print('Loaded RNN weights from ' + ckpt_path)
@@ -73,24 +73,25 @@ def main(config, valid_config):
         # set up
         with classifier_graph.as_default():
 
+            classifier = BinaryLogisticClassifier(config, use_rnn=config['use_rnn'])
+            classifier.build_graph()
+            valid_classifier = BinaryLogisticClassifier(valid_config, use_rnn=config['use_rnn'])
+            valid_classifier.build_graph()
+
             # set up training
             with tf.variable_scope('training'):
-
-                classifier = BinaryLogisticClassifier(config, use_rnn=config['use_rnn'])
-                classifier.build_graph()
+                learning_rate = tf.Variable(config['learning_rate'], name="learning_rate", trainable=False)
 
                 tvars = tf.trainable_variables(scope='binary_logistic_classifier')
                 grads, _ = tf.clip_by_global_norm(tf.gradients(classifier.loss, tvars), config['max_grad_norm'])
-                optimizer = tf.train.AdamOptimizer(learning_rate=config['learning_rate'])
+                optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
                 global_step = tf.Variable(0, name="global_step", trainable=False)
                 train_op = optimizer.apply_gradients(zip(grads, tvars),
-                                                     global_step=global_step)
+                                                     global_step=global_step, name='train_classifier_op')
 
-            with tf.variable_scope('validation'):
-                valid_classifier = BinaryLogisticClassifier(valid_config, use_rnn=config['use_rnn'])
-                valid_classifier.build_graph()
+                #global_epoch = tf.Variable(0, name='global_epoch', trainable=False)
+                #epoch_counter_op = tf.assign(global_epoch, global_epoch + 1, name='epoch_counter_op')
 
-            global_step = tf.Variable(1, name='global_step', trainable=False)
 
             saver = tf.train.Saver(var_list=tf.trainable_variables(), max_to_keep=config['n_checkpoints_to_keep'])
             sess = tf.Session()
@@ -98,7 +99,7 @@ def main(config, valid_config):
 
         # start training
         start_time = time.time()
-        for e in range(config['n_epochs']):
+        for e in range(config['num_epochs']):
             step = tf.train.global_step(sess, global_step)
 
             for i, batch in enumerate(dataset_train.all_batches(shuffle=True)):
@@ -109,39 +110,63 @@ def main(config, valid_config):
                 with rnn_graph.as_default():
                     features = get_features(batch, config['static_features'], config['use_rnn'], rnn_sess, rnn)
 
+                train_loss = 0
                 with classifier_graph.as_default():
                     # get the target labels
+                    feed_dict = {classifier.inputs: features, classifier.targets: batch.ending_labels}
+                    fetches = {'train_op': train_op, 'loss': classifier.loss, 'lr': learning_rate}
                     # train the model
+                    train_output = sess.run(fetches, feed_dict)
 
-                    pass
+                    train_loss += train_output['loss'] * batch.batch_size
+                    time_delta = str(datetime.timedelta(seconds=int(time.time() - start_time)))
+                    print('\rEpoch: {:3d} [{:4d}/{:4d}] time: {:s} lr: {:f} loss: {:f}'.format(
+                        e + 1, i + 1, dataset_train.n_batches, time_delta, train_output['lr'],
+                        train_output['loss']), end='')
+
 
 
             for i, batch in enumerate(dataset_val.all_batches()):
-                loss_valid = 0.
-
+                valid_loss = 0.
                 with rnn_graph.as_default():
                     features = get_features(batch, config['static_features'], config['use_rnn'], rnn_sess, rnn)
 
                 with classifier_graph.as_default():
-                    pass
+                    feed_dict = {valid_classifier.inputs: features, valid_classifier.targets: batch.ending_labels }
+                    fetches = {'loss': valid_classifier.loss}
+                    val_output = sess.run(fetches, feed_dict)
+                    valid_loss += val_output['loss'] * batch.batch_size
+
+            time_delta = str(datetime.timedelta(seconds=int(time.time() - start_time)))
+            print('\rEpoch: {:3d}, time: {:s}; avg training loss: {:f}'.format(
+                e + 1, time_delta, train_loss / dataset_train.data_size), end='\n')
+            print('\rEpoch: {:3d}, time: {:s} \t --- validation loss: {:f} --- '.format(
+                e + 1, time_delta, valid_loss / dataset_val.data_size), end='\n')
 
             if (e + 1) % config['save_checkpoints_every_epoch'] == 0:
                 with classifier_graph.as_default():
-                    ckpt_path = saver.save(sess, config['model_dir'] + "/ep"+str(e+1), global_step)
+                    ckpt_path = saver.save(sess, config['model_dir'] + "/ep"+str(e+1), global_step=e+1)
                     print("Model saved to: "+ ckpt_path)
+
+            #with classifier_graph.as_default():
+            #    sess.run(epoch_counter_op)
 
 
 
     finally:
+        with classifier_graph.as_default():
+            print("Finishing...")
+            saver.save(sess, config['model_dir'], global_step=e+1)
+            print("... model saved to: "+ ckpt_path )
+        sess.close()
         if config['use_rnn']:
-            with classifier_graph.as_default():
-                saver.save(sess, config['model_dir'] + "/ep"+str(e+1), global_step)
-                print("Finishing; model saved to: "+ ckpt_path )
-            sess.close()
             rnn_sess.close()
 
 
 if __name__ == "__main__":
     from config_full import config, valid_config
+
+    if not os.path.exists(config['output_dir']):
+        os.makedirs(config['output_dir'])
     shutil.copy2("config_full.py", os.path.join(config['output_dir'], 'theconfig.txt'))
     main(config, valid_config)

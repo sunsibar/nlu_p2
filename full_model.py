@@ -37,10 +37,11 @@ class BinaryLogisticClassifier:
 
         with tf.variable_scope('binary_logistic_classifier', reuse=self.reuse):
             self.logit_1 = tf.contrib.layers.fully_connected(self.inputs, 1, activation_fn=None)
-            if self.mode is not 'inference':
-                self.loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.targets, logits=self.logit_1)
             self.logit_2 = tf.fill(tf.shape(self.logit_1), 1.)
             self.logits = tf.concat([self.logit_1, self.logit_2], axis= 1)
+            if self.mode is not 'inference':
+                self.loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.targets, logits=self.logits)
+                self.loss = tf.reduce_mean(self.loss, name="loss")
             self.predictions = tf.argmax(self.logits, axis=1)
             self.predictions += tf.ones_like(self.predictions)
 
@@ -96,60 +97,74 @@ def get_features(batch, feature_dict, use_rnn=False, sess=None, rnn=None):
     if use_rnn, calculate rnn features as well. This needs a session and an rnn to be passed.
     :return: a numpy array of shape batch_size x num_features
     '''
-    num_sentences = batch.num_sentences()
-    features = np.zeros(shape=(batch.batch_size(), 0))
+    num_sentences = batch.num_sentences
+    features = np.zeros(shape=(batch.batch_size, 0))
     if use_rnn:
         assert sess is not None and rnn is not None
         rnn_feats = get_RNN_features(sess, rnn, batch)
-        np.stack((features, rnn_feats), axis=1)
+        features = np.hstack((features, rnn_feats))
 
     sent_lens = []
     if feature_dict['sentence_lengths']:
         for i in range(num_sentences):
             sent_lens.append(batch.sent_len(i))
-        sent_lens = np.array(sent_lens)  # .transpose()
-    features.append(sent_lens)
+        sent_lens = np.array(sent_lens).transpose()
+    features = np.hstack((features, sent_lens))
     if feature_dict['sentiment']:
         raise NotImplementedError
 
-    # make batch dimension be the outer dimension
-    features = np.array(features).reshape(shape=(-1, features.shape[-1])).transpose()
+    # make batch dimension be the outer dimension -- no it is already
+    #features = np.array(features).reshape(shape=(-1, features.shape[-1])).transpose()
     return features
 
 
-def get_RNN_features(self, sess, rnn, batch):
-        assert self.use_rnn
-        ending_1 = [5]
-        ending_2 = [6]
-        sent_without_ending = [0,1,2,3,4]
-        sent_n_ending_1 = [0,1,2,3,4,5]
-        sent_n_ending_2 = [0,1,2,3,4,6]
+def get_RNN_features(sess, rnn, batch):
+        debug = False  # run once with debug=True if you have a properly trained model
+        ending_1 = [4]
+        ending_2 = [5]
+        sent_without_ending = [0,1,2,3]
+        sent_n_ending_1 = [0,1,2,3,4]
+        sent_n_ending_2 = [0,1,2,3,5]
 
         # first, get full story probabilities
-        ending_idx         = batch.sents_len(sent_without_ending)
-        feed_dict          = rnn.get_feed_dict_train(batch, which_sentences=sent_n_ending_1)
-        p_end1_I_story = sess.run([rnn.word_probabs],   feed_dict=feed_dict)
-        p_end1_I_story = np.product(p_end1_I_story[ : , ending_idx : ], axis=1)
-        feed_dict          = rnn.get_feed_dict_infer(batch, which_sentences=sent_n_ending_2)
-        p_end2_I_story = sess.run([rnn.word_probabs],   feed_dict=feed_dict)
-        p_end2_I_story = np.product(p_end2_I_story[ : , ending_idx : ], axis=1)
+        ending_idcs          = batch.sents_len(sent_without_ending)
+        feed_dict            = rnn.get_feed_dict_train(batch, which_sentences=sent_n_ending_1)
+        p_end1_I_story_batch = sess.run([rnn.word_probabs],   feed_dict=feed_dict)[0]
+        p_end1_I_story       = []
+        for bi, p1_I_story in enumerate(p_end1_I_story_batch):
+            p_end1_I_story.append(np.product(p1_I_story[ ending_idcs[bi] : ]))
+        p_end1_I_story = np.array(p_end1_I_story)
+        assert len(p_end1_I_story) == batch.batch_size
+        feed_dict            = rnn.get_feed_dict_train(batch, which_sentences=sent_n_ending_2)
+        p_end2_I_story_batch = sess.run([rnn.word_probabs],   feed_dict=feed_dict)[0]
+        p_end2_I_story       = []
+        for bi, p2_I_story in enumerate(p_end2_I_story_batch):
+            p_end2_I_story.append(np.product(p2_I_story[ ending_idcs[bi] : ]))
+        p_end2_I_story = np.array(p_end2_I_story)
+        assert len(p_end2_I_story) == batch.batch_size
 
         # then, get both endings' probability
         feed_dict   = rnn.get_feed_dict_train(batch, which_sentences=ending_1)
-        p_end1      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)
+        p_end1      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)[0]
         feed_dict   = rnn.get_feed_dict_train(batch, which_sentences=ending_2)
-        p_end2      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)
+        p_end2      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)[0]
+        assert p_end1.shape == p_end2.shape == (batch.batch_size,)
 
         # get additional features p_endi_I_sent / p_endi
         p1_I_by_p1 =  p_end1_I_story / p_end1
         p2_I_by_p2 =  p_end2_I_story / p_end2
+        assert p1_I_by_p1.shape == p2_I_by_p2.shape == (batch.batch_size,)
 
         probabs = np.array([p_end1, p_end2, p_end1_I_story, p_end2_I_story, p1_I_by_p1, p2_I_by_p2])
         probabs = probabs.transpose()
-        assert probabs.shape[1] == 6 and probabs.shape[0] == batch.batch_size()
+        assert probabs.shape[1] == 6 and probabs.shape[0] == batch.batch_size
         #    probabs = {'p_end1': p_end1,                        'p_end2': p_end2,
         #               'p_end1_given_story': p_end1_I_story,    'p_end2_given_story': p_end2_I_story,
         #               'p1_I_by_p1':,   'p2_I_by_p2':}
+
+        if debug:
+            print([probabs[l, (0, 2, 4)] if lab == 1 else probabs[l, (1, 3, 5)] for l, lab in enumerate(batch.ending_labels)])
+            print([probabs[l, (1, 3, 5)] if lab == 1 else probabs[l, (0, 2, 4)] for l, lab in enumerate(batch.ending_labels)])
         return probabs
 
 

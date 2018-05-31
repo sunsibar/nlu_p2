@@ -22,7 +22,7 @@ class StoryDataset:
         self.story_ids = story_ids
         self.story_keys = None   # metadata
         self.story_titles = None # metadata
-        self.wrong_endings = None # says whether the correct ending is the fifth sentence ("1") or the sixth ("2")
+        self.ending_labels = None # says whether the correct ending is the fifth sentence ("1") or the sixth ("2")
         self.feeder = None # Could have integrated Feeder into this class, but why bother now
 
     def preprocess(self, preprocessor):
@@ -55,6 +55,11 @@ class StoryDataset:
         else:
             return [self.stories[i] for i in indices]
 
+    @property
+    def n_batches(self):
+        assert self.feeder is not None
+        return self.feeder.n_batches
+
 
 
 def storydata_from_csv(path, batch_size, val_part=0.1, has_titles=True, has_ending_labels=False):
@@ -76,8 +81,8 @@ def storydata_from_csv(path, batch_size, val_part=0.1, has_titles=True, has_endi
         ds_val.story_titles   = stories_df.iloc[:,1].values[ -n_val : ]
         stories_df.drop(stories_df.columns[1], axis=1, inplace=True)
     if has_ending_labels:
-        ds_train.wrong_endings = stories_df.iloc[:,-1].values[ : -n_val ]
-        ds_val.wrong_endings   = stories_df.iloc[:,-1].values[ -n_val : ]
+        ds_train.ending_labels = stories_df.iloc[:,-1].values[ : -n_val ] - 1
+        ds_val.ending_labels   = stories_df.iloc[:,-1].values[ -n_val : ] - 1
         stories_df.drop(stories_df.columns[-1], axis=1, inplace=True)
     story_mat = stories_df.iloc[:, 1:].values
     all_stories = []
@@ -128,10 +133,10 @@ class StoryFeeder:
         else:
             ids = all_ids[ptr : ptr + self.batch_size]
         stories = None
-        wrong_endings = self.dataset.wrong_endings # could be None
+        ending_labels = self.dataset.ending_labels[ids] # could be None
         if return_raw:
             stories = self.dataset.get_data(ids, id=False)
-        return StoryBatch(story_ids=self.dataset.get_data(ids), stories=stories, wrong_endings=wrong_endings)
+        return StoryBatch(story_ids=self.dataset.get_data(ids), stories=stories, ending_labels=ending_labels)
 
     def adv_batchptr(self):
         self.batch_ptr = self.batch_ptr + 1
@@ -156,10 +161,10 @@ class StoryFeeder:
 
 
 class StoryBatch():
-    def __init__(self, story_ids=None, stories=None, wrong_endings=None):
+    def __init__(self, story_ids=None, stories=None, ending_labels=None):
         self._story_ids = story_ids
         self._stories = stories
-        self._wrong_endings = wrong_endings # a batch-size-sized list of '1's and '2's, indicating whether the fifth or the sixth sentence is the correct ending
+        self._ending_labels = ending_labels # a batch-size-sized list of '1's and '2's, indicating whether the fifth or the sixth sentence is the correct ending
         self._mask = None
         self._seq_lengths = None # Lengths of every entire sequence, when concatenating all sentences of a story
         self._target_ids = None
@@ -183,23 +188,28 @@ class StoryBatch():
         return self._seq_lengths
 
     @property
-    def batchsize(self):
+    def batch_size(self):
         if self.story_ids is not None:
             return len(self.story_ids)
         elif self.stories is not None:
             return len(self.stories)
         else:
-            assert self._wrong_endings is None, "Error: Found batch with only wrong ending labels, but no data"
+            assert self._ending_labels is None, "Error: Found batch with only wrong ending labels, but no data"
             return 0
 
     def sent_len(self, sent_idx):
-        ''' for each story in the batch, return the number of tokens (~words) in the sent_idx'th sentence'''
+        '''
+        Length: in number of words.
+        for each story in the batch, return the number of tokens (~words) in the sent_idx'th sentence'''
         return [len(story[sent_idx]) for story in self.story_ids]
 
     def sents_len(self, sent_idces):
-        '''For each story in the batch, return the combined length of the senteces indexed by sent_idces.'''
-        return np.sum(np.array([self.sent_len(sent_idx) for sent_idx in sent_idces]), axis=1)
+        '''
+        Length: in number of words.
+        For each story in the batch, return the combined length of the senteces indexed by sent_idces.'''
+        return np.sum(np.array([self.sent_len(sent_idx) for sent_idx in sent_idces]), axis=0)
 
+    @property
     def num_sentences(self):
         num = len(self.story_ids[0]) # num of sentences in first story
         for story in self.story_ids:
@@ -214,9 +224,9 @@ class StoryBatch():
     def stories(self):
         return self._stories
     @property
-    def wrong_endings(self):
-        assert self._wrong_endings is not None, "Batch was created without raw wrong endings"
-        return self.wrong_endings
+    def ending_labels(self):
+        assert self._ending_labels is not None, "Batch was created without data about correct endings "
+        return self._ending_labels
 
     def get_padded_data(self, which_sentences=[0,1,2,3,4], use_next_step_as_target=True, pad_target=True):
         """
@@ -267,7 +277,7 @@ class StoryBatch():
 
 
     def get_ending_labels(self):
-        assert self._wrong_endings is not None
+        assert self._ending_labels is not None
         raise NotImplementedError
 
 

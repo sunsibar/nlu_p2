@@ -69,9 +69,11 @@ class RNNModel():
 
 
 
-    def get_feed_dict_train(self, batch):
+    def get_feed_dict_train(self, batch, which_sentences=None):
         '''batch --> feed_dict for training'''
-        X, Y, batch_seq_lengths = batch.get_padded_data()
+        if which_sentences is None:
+            which_sentences = range(batch.num_sentences)
+        X, Y, batch_seq_lengths = batch.get_padded_data(which_sentences=which_sentences)
         feed_dict = {self.input_x: X,
                      self.input_y: Y,
                      self.sequence_length_list: batch_seq_lengths}
@@ -81,7 +83,7 @@ class RNNModel():
     def get_feed_dict_infer(self, batch, which_sentences=None):
         '''batch --> feed_dict for training'''
         if which_sentences is None:
-            which_sentences = range(batch.get_batchsize())
+            which_sentences = range(batch.num_sentences)
         X, _, batch_seq_lengths = batch.get_padded_data(which_sentences=which_sentences,
                                                         use_next_step_as_target=False, pad_target=False)
         feed_dict = {self.input_x: X,
