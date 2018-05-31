@@ -99,18 +99,18 @@ def main(config, valid_config):
 
         # start training
         start_time = time.time()
+        train_loss = 0.
         for e in range(config['num_epochs']):
             step = tf.train.global_step(sess, global_step)
 
             for i, batch in enumerate(dataset_train.all_batches(shuffle=True)):
-            # For each batch of data, do:
+                # For each batch of data, do:
 
                 # get features, static features need no tensorflow so doesn't matter that it's the rnn graph
                 # need rnn graph in case we use an rnn
                 with rnn_graph.as_default():
                     features = get_features(batch, config['static_features'], config['use_rnn'], rnn_sess, rnn)
 
-                train_loss = 0
                 with classifier_graph.as_default():
                     # get the target labels
                     feed_dict = {classifier.inputs: features, classifier.targets: batch.ending_labels}
@@ -126,8 +126,8 @@ def main(config, valid_config):
 
 
 
+            valid_loss = 0.
             for i, batch in enumerate(dataset_val.all_batches()):
-                valid_loss = 0.
                 with rnn_graph.as_default():
                     features = get_features(batch, config['static_features'], config['use_rnn'], rnn_sess, rnn)
 
@@ -148,8 +148,8 @@ def main(config, valid_config):
                     ckpt_path = saver.save(sess, config['model_dir'] + "/ep"+str(e+1), global_step=e+1)
                     print("Model saved to: "+ ckpt_path)
 
-            #with classifier_graph.as_default():
-            #    sess.run(epoch_counter_op)
+                    #with classifier_graph.as_default():
+                    #    sess.run(epoch_counter_op)
 
 
 

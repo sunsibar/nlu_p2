@@ -133,7 +133,7 @@ class StoryFeeder:
         else:
             ids = all_ids[ptr : ptr + self.batch_size]
         stories = None
-        ending_labels = self.dataset.ending_labels[ids] # could be None
+        ending_labels = None if self.dataset.ending_labels is None else self.dataset.ending_labels[ids]
         if return_raw:
             stories = self.dataset.get_data(ids, id=False)
         return StoryBatch(story_ids=self.dataset.get_data(ids), stories=stories, ending_labels=ending_labels)
