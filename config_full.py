@@ -18,8 +18,8 @@ rnn_config['mode'] = 'infer_RNN' # one of 'train_RNN', 'validate_RNN', 'infer_RN
 
 if rnn_config['model_type'] == 'simple':
     rnn_config['hidden_size'] = 100
-    rnn_config['num_layers'] = 3
-    rnn_config['no_dropout_ids'] = [0] # unused # don't use dropout between input and first layer
+    #rnn_config['num_layers'] = 3
+    #rnn_config['no_dropout_ids'] = [0] # unused # don't use dropout between input and first layer
 
     rnn_config['embedding_dim'] = 100
     rnn_config['is_use_embedding'] = True
@@ -65,7 +65,7 @@ config['vocab_size'] = rnn_config['vocab_size'] = 20000
 #config['limit_num_samples'] = 20   # Unused ; None, or a positive number to reduce the number of samples during training
 
 # In training the final classifier, needs an RNN model that's already been trained
-config['rnn_model_dir'] = '../trained_models/RNN/simple-3L-100h_useE-True_addL-False/18-May-26_00h21-19' # add path to model here
+config['rnn_model_dir'] = '../trained_models/RNN/simple-3L-100h_useE-True_addL-False/18-May-31_19h15-55/checkpoints_ep4/' # add path to model here
 config['rnn_model_id'] = None # None, then use latest checkpoint, or add the checkpoint ID here
 config['name'] = config['model_type']
 if config['use_rnn']:

@@ -18,8 +18,8 @@ rnn_config['mode'] = 'train_RNN' # one of 'train_RNN', 'validate_RNN', 'infer_RN
 
 if rnn_config['model_type'] == 'simple':
     rnn_config['hidden_size'] = 100
-    rnn_config['num_layers'] = 3
-    rnn_config['no_dropout_ids'] = [0] # unused # don't use dropout between input and first layer
+    #rnn_config['num_layers'] = 3
+    #rnn_config['no_dropout_ids'] = [0] # unused # don't use dropout between input and first layer
 
     rnn_config['embedding_dim'] = 100
     rnn_config['is_use_embedding'] = True

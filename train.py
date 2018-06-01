@@ -12,7 +12,7 @@ from train_utils import get_rnn_model
 from full_model import BinaryLogisticClassifier, get_features
 import datetime
 
-## TODO: add summaries 
+## TODO: add summaries
 
 
 # ---  set up datasets --- #
