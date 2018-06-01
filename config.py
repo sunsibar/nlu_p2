@@ -26,7 +26,7 @@ if rnn_config['model_type'] == 'simple':
     rnn_config['embedding_path'] = "./embs/wordembeddings-dim100.word2vec"
     rnn_config['is_add_layer'] = False
 
-    rnn_config['name'] = rnn_config['model_type'] + "-" + str(rnn_config['num_layers']) + "L-" + str(
+    rnn_config['name'] = rnn_config['model_type'] + "-" + "L-" + str(
         rnn_config['hidden_size']) + "h_useE-"+str(rnn_config['is_use_embedding'])+"_addL-"+str(rnn_config['is_add_layer'])
 
 
