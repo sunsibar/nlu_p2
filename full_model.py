@@ -42,11 +42,11 @@ class BinaryLogisticClassifier:
             if self.mode is not 'inference':
                 self.loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.targets, logits=self.logits)
                 self.loss = tf.reduce_mean(self.loss, name="loss")
-            self.predictions = tf.argmax(self.logits, axis=1)
-            self.predictions += tf.ones_like(self.predictions)
+            self.predictions_01 = tf.argmax(self.logits, axis=1)
+            self.predictions =  self.predictions_01 + tf.ones_like(self.predictions_01)
 
             self.accuracy, self.accuracy_op = tf.metrics.accuracy(
-                labels=self.targets, predictions=self.predictions)
+                labels=self.targets, predictions=self.predictions_01)
 
     def train(self, batch, sess):
         pass
