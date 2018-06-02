@@ -98,6 +98,7 @@ def main(config, valid_config):
             saver = tf.train.Saver(var_list=tf.trainable_variables(), max_to_keep=config['n_checkpoints_to_keep'])
             sess = tf.Session()
             sess.run(tf.global_variables_initializer())  # let's hope this initializes only one graph
+            sess.run(tf.local_variables_initializer())
 
         # start training
         start_time = time.time()
@@ -129,21 +130,29 @@ def main(config, valid_config):
 
 
             valid_loss = 0.
+            valid_accur = 0.
             for i, batch in enumerate(dataset_val.all_batches()):
                 with rnn_graph.as_default():
                     features = get_features(batch, config['static_features'], config['use_rnn'], rnn_sess, rnn)
 
                 with classifier_graph.as_default():
                     feed_dict = {valid_classifier.inputs: features, valid_classifier.targets: batch.ending_labels }
-                    fetches = {'loss': valid_classifier.loss}
+                    fetches = {'loss': valid_classifier.loss, 'accuracy': valid_classifier.accuracy, 'accuracy_op': valid_classifier.accuracy_op}
                     val_output = sess.run(fetches, feed_dict)
+                    accur = sess.run([valid_classifier.accuracy], feed_dict)[0]
+                    print("accur: " + str(accur))
                     valid_loss += val_output['loss'] * batch.batch_size
+                    valid_accur += accur * batch.batch_size
 
             time_delta = str(datetime.timedelta(seconds=int(time.time() - start_time)))
             print('\rEpoch: {:3d}, time: {:s}; avg training loss: {:f}'.format(
                 e + 1, time_delta, train_loss / dataset_train.data_size), end='\n')
             print('\rEpoch: {:3d}, time: {:s} \t --- validation loss: {:f} --- '.format(
                 e + 1, time_delta, valid_loss / dataset_val.data_size), end='\n')
+            print('\rEpoch: {:3d}, time: {:s} \t --- validation accuracy: {:f} --- '.format(
+                e + 1, time_delta, valid_accur / dataset_val.data_size), end='\n')
+            print('\rEpoch: {:3d}, time: {:s} \t --- or maybe accuracy is: {:f} --- '.format(
+                e + 1, time_delta, accur), end='\n')
 
             if (e + 1) % config['save_checkpoints_every_epoch'] == 0:
                 with classifier_graph.as_default():
@@ -157,8 +166,8 @@ def main(config, valid_config):
 
     finally:
         with classifier_graph.as_default():
-            print("Finishing...")
-            saver.save(sess, config['model_dir'], global_step=e+1)
+            print("\nFinishing...")
+            ckpt_path = saver.save(sess, config['model_dir'], global_step=e+1)
             print("... model saved to: "+ ckpt_path )
         sess.close()
         if config['use_rnn']:

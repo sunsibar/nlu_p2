@@ -45,7 +45,8 @@ class BinaryLogisticClassifier:
             self.predictions = tf.argmax(self.logits, axis=1)
             self.predictions += tf.ones_like(self.predictions)
 
-
+            self.accuracy, self.accuracy_op = tf.metrics.accuracy(
+                labels=self.targets, predictions=self.predictions)
 
     def train(self, batch, sess):
         pass
