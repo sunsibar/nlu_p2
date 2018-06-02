@@ -159,7 +159,7 @@ def get_RNN_features(sess, rnn, batch, log_rnn_features=True):
         probabs = np.array([p_end1, p_end2, p_end1_I_story, p_end2_I_story, p1_I_by_p1, p2_I_by_p2])
         probabs = probabs.transpose()
         if log_rnn_features:
-            probabs = np.log(probabs + 1e-100)
+            probabs = np.log(probabs + 1e-70)
         assert probabs.shape[1] == 6 and probabs.shape[0] == batch.batch_size
         #    probabs = {'p_end1': p_end1,                        'p_end2': p_end2,
         #               'p_end1_given_story': p_end1_I_story,    'p_end2_given_story': p_end2_I_story,
