@@ -140,7 +140,6 @@ def main(config, valid_config):
                     fetches = {'loss': valid_classifier.loss, 'accuracy': valid_classifier.accuracy, 'accuracy_op': valid_classifier.accuracy_op}
                     val_output = sess.run(fetches, feed_dict)
                     accur = sess.run([valid_classifier.accuracy], feed_dict)[0]
-                    print("accur: " + str(accur))
                     valid_loss += val_output['loss'] * batch.batch_size
                     valid_accur += accur * batch.batch_size
 
