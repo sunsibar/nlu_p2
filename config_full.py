@@ -5,7 +5,7 @@ rnn_config['data_dir'] = '../data'
 rnn_config['output_dir'] = '../trained_models/RNN'
 
 #rnn_config["learning_rate"] = 1e-3
-rnn_config["batch_size"] = 32
+rnn_config["batch_size"] = 10
 #rnn_config["num_epochs"] = 10
 #rnn_config['max_grad_norm'] = 5
 
@@ -59,14 +59,15 @@ config['train_data_file'] = 'train_stories.csv'
 config['story_cloze_file'] = 'cloze_test_val__spring2016.csv'
 #config['story_cloze_file'] = 'cloze_test_val_sample.csv'
 config['rnn_config'] = rnn_config
+config['log_rnn_features'] = True
 config['static_features'] = static_features
 #config['max_sentence_length'] = 30 # in words, including special tokens and sentence endings ## TODO: unused so far...
 config['vocab_size'] = rnn_config['vocab_size'] = 20000
 #config['limit_num_samples'] = 20   # Unused ; None, or a positive number to reduce the number of samples during training
 
 # In training the final classifier, needs an RNN model that's already been trained
-config['rnn_model_dir'] = '../trained_models/RNN/simple-3L-100h_useE-True_addL-False/18-May-31_19h15-55/checkpoints_ep4/' # add path to model here
-config['rnn_model_id'] = None # None, then use latest checkpoint, or add the checkpoint ID here
+config['rnn_model_dir'] = '../trained_models/RNN/simple-3L-100h_useE-True_addL-False/18-May-31_19h15-55/checkpoints_ep4' # add path to model here
+config['rnn_model_id'] = '-12400' # None, then use latest checkpoint, or add the checkpoint ID here
 config['name'] = config['model_type']
 if config['use_rnn']:
     config['name'] += "-" + rnn_config['model_type'] + "_rnn"

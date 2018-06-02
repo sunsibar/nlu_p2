@@ -119,7 +119,7 @@ def get_features(batch, feature_dict, use_rnn=False, sess=None, rnn=None):
     return features
 
 
-def get_RNN_features(sess, rnn, batch):
+def get_RNN_features(sess, rnn, batch, log_rnn_features=True):
         debug = False  # run once with debug=True if you have a properly trained model
         ending_1 = [4]
         ending_2 = [5]
@@ -158,14 +158,18 @@ def get_RNN_features(sess, rnn, batch):
 
         probabs = np.array([p_end1, p_end2, p_end1_I_story, p_end2_I_story, p1_I_by_p1, p2_I_by_p2])
         probabs = probabs.transpose()
+        if log_rnn_features:
+            probabs = np.log(probabs + 1e-100)
         assert probabs.shape[1] == 6 and probabs.shape[0] == batch.batch_size
         #    probabs = {'p_end1': p_end1,                        'p_end2': p_end2,
         #               'p_end1_given_story': p_end1_I_story,    'p_end2_given_story': p_end2_I_story,
         #               'p1_I_by_p1':,   'p2_I_by_p2':}
 
         if debug:
-            print([probabs[l, (0, 2, 4)] if lab == 1 else probabs[l, (1, 3, 5)] for l, lab in enumerate(batch.ending_labels)])
-            print([probabs[l, (1, 3, 5)] if lab == 1 else probabs[l, (0, 2, 4)] for l, lab in enumerate(batch.ending_labels)])
+            print("right ending p_end, p_end_I_story, quotient:")
+            print([probabs[l, (0, 2, 4)] if lab == 0 else probabs[l, (1, 3, 5)] for l, lab in enumerate(batch.ending_labels)])
+            print("same for wrong ending:")
+            print([probabs[l, (1, 3, 5)] if lab == 0 else probabs[l, (0, 2, 4)] for l, lab in enumerate(batch.ending_labels)])
         return probabs
 
 
