@@ -1,9 +1,11 @@
+
 '''
 Combine RNN and static features and build a classifier
 on top of them.
 '''
 import numpy as np
 import tensorflow as tf
+import math
 
 class BinaryLogisticClassifier:
     ''' Uses binary logistic regression'''
@@ -152,14 +154,19 @@ def get_RNN_features(sess, rnn, batch, log_rnn_features=True):
         assert p_end1.shape == p_end2.shape == (batch.batch_size,)
 
         # get additional features p_endi_I_sent / p_endi
-        p1_I_by_p1 =  p_end1_I_story / p_end1
-        p2_I_by_p2 =  p_end2_I_story / p_end2
+        p1_I_by_p1 =  p_end1_I_story / (p_end1 + 1e-10)
+        p2_I_by_p2 =  p_end2_I_story / (p_end2 + 1e-10)
         assert p1_I_by_p1.shape == p2_I_by_p2.shape == (batch.batch_size,)
 
         probabs = np.array([p_end1, p_end2, p_end1_I_story, p_end2_I_story, p1_I_by_p1, p2_I_by_p2])
         probabs = probabs.transpose()
+        assert (np.abs(probabs) == probabs).any(), "Negative probability found!"
         if log_rnn_features:
-            probabs = np.log(probabs + 1e-70)
+            probabs = np.log(probabs) # + np.finfo(np.float64).eps)
+#            probabs = np.log(probabs + 1e-70)
+        probabs[probabs==-np.inf]=-100
+        assert not np.nan in probabs, "Nan value in logprobabilities!"
+        assert not np.isinf(probabs).any(), "Inf value in logprobabilities!"
         assert probabs.shape[1] == 6 and probabs.shape[0] == batch.batch_size
         #    probabs = {'p_end1': p_end1,                        'p_end2': p_end2,
         #               'p_end1_given_story': p_end1_I_story,    'p_end2_given_story': p_end2_I_story,
