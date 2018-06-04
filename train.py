@@ -43,6 +43,8 @@ def main(config, valid_config):
     timestamp = datetime.datetime.now().strftime("%y-%b-%d_%Hh%M-%S")  # str(int(time.time()))
     config['model_dir'] = os.path.abspath(
         os.path.join(config['output_dir'], config['name'] + '/' + timestamp))
+
+    shutil.copy2("config_full.py", os.path.join(config['output_dir'], 'theconfig.txt'))
     print("write to {}\n".format(config['model_dir']), flush=True)
 
 
@@ -178,5 +180,4 @@ if __name__ == "__main__":
 
     if not os.path.exists(config['output_dir']):
         os.makedirs(config['output_dir'])
-    shutil.copy2("config_full.py", os.path.join(config['output_dir'], 'theconfig.txt'))
     main(config, valid_config)
