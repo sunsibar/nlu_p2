@@ -101,7 +101,7 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                     _, summary, step, loss = sess.run([train_op, train_summary_op, global_step, model_train.print_perplexity],
                                                         feed_dict=feed_dict)
                     train_summary_writer.add_summary(summary=summary, global_step=step)
-                    print('\ribatch {:d}, max loss {:f}'.format(ib, np.max(loss)), end='')
+                    print('\ribatch {:d}, max loss {:f}, loss {:f}'.format(ib, np.max(loss), np.mean(loss)), end='')
                     train_loss += loss
                 # -- validate --
                 valid_loss = 0.

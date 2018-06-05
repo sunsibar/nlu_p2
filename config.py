@@ -6,7 +6,7 @@ rnn_config['output_dir'] = '../trained_models/RNN'
 
 rnn_config["learning_rate"] = 1e-3
 rnn_config["batch_size"] = 32
-rnn_config["num_epochs"] = 10
+rnn_config["num_epochs"] = 100
 rnn_config['max_grad_norm'] = 5
 
 rnn_config['save_checkpoints_every_epoch'] = 5
@@ -25,6 +25,7 @@ if rnn_config['model_type'] == 'simple':
     rnn_config['is_use_embedding'] = True
     rnn_config['embedding_path'] = "./embs/wordembeddings-dim100.word2vec"
     rnn_config['is_add_layer'] = False
+    rnn_config['is_dropout'] = False
 
     rnn_config['name'] = rnn_config['model_type'] + "-" + "L-" + str(
         rnn_config['hidden_size']) + "h_useE-"+str(rnn_config['is_use_embedding'])+"_addL-"+str(rnn_config['is_add_layer'])
@@ -48,7 +49,7 @@ config['mode'] = 'training' # one of 'training', 'validation', 'inference'
 config['use_rnn'] = True
 config["learning_rate"] = 1e-2
 config["batch_size"] = rnn_config['batch_size']
-config["num_epochs"] = 10
+config["num_epochs"] = 100
 config['max_grad_norm'] = 5
 
 rnn_config['save_checkpoints_every_epoch'] = 5
@@ -62,7 +63,7 @@ config['rnn_config'] = rnn_config
 config['static_features'] = static_features
 #config['max_sentence_length'] = 30 # in words, including special tokens and sentence endings ## TODO: unused so far...
 config['vocab_size'] = rnn_config['vocab_size'] = 20000
-config['limit_num_samples'] = 20   # Unused ; None, or a positive number to reduce the number of samples during training
+#config['limit_num_samples'] = 20   # Unused ; None, or a positive number to reduce the number of samples during training
 
 # In training the final classifier, needs an RNN model that's already been trained
 config['rnn_model_dir'] = '../trained_models/RNN/simple-3L-100h_useE-True_addL-False/18-May-26_00h21-19' # add path to model here
