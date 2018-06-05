@@ -32,6 +32,9 @@ class RNNModel():
                                            initializer=tf.contrib.layers.xavier_initializer())
             else:
                 rnncell = tf.nn.rnn_cell.LSTMCell(num_units=self.hidden_size)
+            # dropout
+            if rnn_config['mode'] == 'train_RNN':
+                rnncell = tf.contrib.rnn.DropoutWrapper(rnncell, output_keep_prob=0.5)
             state = rnncell.zero_state(batch_size=self.batch_size, dtype=tf.float32)
             outputs, state = tf.nn.dynamic_rnn(rnncell, self.embedded_tokens, sequence_length=self.sequence_length_list,
                                                initial_state=state)
@@ -46,8 +49,8 @@ class RNNModel():
             self.b_out = tf.Variable(tf.constant(0.1, shape=[self.vocab_size,]), name='b_out')
 
             # dropout
-            if rnn_config['mode'] == 'train_RNN':
-                self.outputs = tf.nn.dropout(self.outputs, keep_prob=0.4)
+            #if rnn_config['mode'] == 'train_RNN':
+            #    self.outputs = tf.nn.dropout(self.outputs, keep_prob=0.4)
 
             logits = tf.nn.xw_plus_b(self.outputs, self.W_out, self.b_out)
             logits = tf.reshape(logits, shape=[self.max_seq_length, -1, self.vocab_size])  # (time_step,batch_size,vocab_size)

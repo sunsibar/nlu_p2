@@ -107,10 +107,11 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                 valid_loss = 0.
                 for ib, ibatch in enumerate(val_dataset.all_batches()):
                 #val_allbatch = val_dataset.next_batch(shuffle=False)
-                    X_v, Y_v, val_seq_lengths = ibatch.get_padded_data()
-                    valid_loss += sess.run([model_val.print_perplexity], feed_dict={model_val.input_x: X_v,
-                                                                           model_val.input_y: Y_v,
-                                                                           model_val.sequence_length_list: val_seq_lengths})[0]
+                    #X_v, Y_v, val_seq_lengths = ibatch.get_padded_data()
+                    feed_dict = model_val.get_feed_dict_train(ibatch)
+                    valid_loss += sess.run([model_val.print_perplexity], feed_dict=feed_dict)[0]#{model_val.input_x: X_v,
+                                                                           #model_val.input_y: Y_v,
+                                                                           #model_val.sequence_length_list: val_seq_lengths})[0]
                 print("\nep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)
                 print("ep:", epoch, "valid_loss", valid_loss / val_dataset.data_size, flush=True)
                 sys.stdout.flush()
