@@ -43,35 +43,55 @@ def get_perplexities_right_wrong(config, rnn_config, output_dir):
         wrong_ending_probabs = []
         cond_right_ending_probabs = []
         cond_wrong_ending_probabs = []
+        right_ending_lengths = []
+        wrong_ending_lengths = []
+        story_lengths = []
         for batch in dataset_train.all_batches():       # TODO: log_features=True - better values
-            features = get_RNN_features(sess, rnn, batch, log_rnn_features=False)
+            features = get_RNN_features(sess, rnn, batch, log_rnn_features=True)
             r_e_p = [f[0] if  batch.ending_labels[i] == 0 else f[1] for i, f in enumerate(features) ]
             w_e_p = [f[1] if  batch.ending_labels[i] == 0 else f[0] for i, f in enumerate(features) ]
             cr_e_p = [f[2] if  batch.ending_labels[i] == 0 else f[3] for i, f in enumerate(features) ]
             cw_e_p = [f[3] if  batch.ending_labels[i] == 0 else f[2] for i, f in enumerate(features) ]
+            r_e_l = [len(story[ 4 + batch.ending_labels[i] ])   for i, story in enumerate(batch.story_ids) ]
+            w_e_l = [len(story[ 5 - batch.ending_labels[i] ])   for i, story in enumerate(batch.story_ids) ]
+            s_l = [len(story[ : 4])   for i, story in enumerate(batch.story_ids) ]
             right_ending_probabs.append(r_e_p)
             wrong_ending_probabs.append(w_e_p)
             cond_right_ending_probabs.append(cr_e_p)
             cond_wrong_ending_probabs.append(cw_e_p)
+            right_ending_lengths.append(r_e_l)
+            wrong_ending_lengths.append(w_e_l)
+            story_lengths.append(s_l)
+
 
         for batch in dataset_val.all_batches():
-            features = get_RNN_features(sess, rnn, batch, log_rnn_features=False)
-            right_ending_probabs.append(features[:, 0])
-            wrong_ending_probabs.append(features[:, 1])
-            cond_right_ending_probabs.append(features[:, 2])
-            cond_wrong_ending_probabs.append(features[:, 3])
+            features = get_RNN_features(sess, rnn, batch, log_rnn_features=True)
+            r_e_p = [f[0] if  batch.ending_labels[i] == 0 else f[1] for i, f in enumerate(features) ]
+            w_e_p = [f[1] if  batch.ending_labels[i] == 0 else f[0] for i, f in enumerate(features) ]
+            cr_e_p = [f[2] if  batch.ending_labels[i] == 0 else f[3] for i, f in enumerate(features) ]
+            cw_e_p = [f[3] if  batch.ending_labels[i] == 0 else f[2] for i, f in enumerate(features) ]
+            r_e_l = [len(story[ 4 + batch.ending_labels[i] ])   for i, story in enumerate(batch.story_ids) ]
+            w_e_l = [len(story[ 5 - batch.ending_labels[i] ])   for i, story in enumerate(batch.story_ids) ]
+            s_l = [len(story[ : 4])   for i, story in enumerate(batch.story_ids) ]
+            right_ending_probabs.append(r_e_p)
+            wrong_ending_probabs.append(w_e_p)
+            cond_right_ending_probabs.append(cr_e_p)
+            cond_wrong_ending_probabs.append(cw_e_p)
+            right_ending_lengths.append(r_e_l)
+            wrong_ending_lengths.append(w_e_l)
+            story_lengths.append(s_l)
 
         right_ending_probabs = np.hstack([np.array(r) for r in right_ending_probabs])
         wrong_ending_probabs = np.hstack([np.array(r) for r in wrong_ending_probabs])
         cond_right_ending_probabs = np.hstack([np.array(r) for r in cond_right_ending_probabs])
-        cond_wrong_ending_probabs = np.hstack([np.array(r) for r in cond_wrong_ending_probabs])
+        cond_wrong_ending_probabs = np.hstack([np.array(r) for r in cond_wrong_ending_probabs]) #       right_ending_lengths = np.hstack([np.array(r) for r in right_ending_lengths])#      wrong_ending_lengths = np.hstack([np.array(r) for r in wrong_ending_lengths]) #        story_lengths = np.hstack([np.array(r) for r in story_lengths])
 
         L = dataset_train.data_size + dataset_val.data_size
         assert L == len(right_ending_probabs) == len(wrong_ending_probabs) \
-               == len(cond_right_ending_probabs) == len(cond_wrong_ending_probabs)
+               == len(cond_right_ending_probabs) == len(cond_wrong_ending_probabs)  #\               == len(story_lengths) == len(right_ending_lengths) == len(wrong_ending_lengths)
 
 
-        return right_ending_probabs, wrong_ending_probabs, cond_right_ending_probabs, cond_wrong_ending_probabs
+        return right_ending_probabs, wrong_ending_probabs, cond_right_ending_probabs, cond_wrong_ending_probabs#, \               right_ending_lengths, wrong_ending_lengths, story_lengths
 
 
 
@@ -100,7 +120,7 @@ def stddev(data, ddof=0):
     return pvar**0.5
 
 
-def create_perp_plots(r_p, w_p, c_r_p, c_w_p, output_dir):
+def create_perp_plots(r_p, w_p, c_r_p, c_w_p, r_e_l, w_e_l, s_l, output_dir):
 
 
     r_p_mean = np.mean(r_p)
@@ -112,19 +132,36 @@ def create_perp_plots(r_p, w_p, c_r_p, c_w_p, output_dir):
     c_r_p_std =  stddev(c_r_p.astype(np.float128))
     c_w_p_std = stddev(c_w_p.astype(np.float128))
 
-    # TODO: add variance, to show how hilariously small the differences are
+    timestamp = datetime.datetime.now().strftime("%y-%b-%d_%Hh%M-%S")
     f = plt.figure()
-    plt.errorbar(['p(real ending)', 'p(wrong ending)'], [r_p_mean, w_p_mean],
+    plt.errorbar(['log p(real ending)', 'log p(wrong ending)'], [r_p_mean, w_p_mean],
                  [r_p_std, w_p_std], linestyle='None', marker='^', elinewidth=0.5)
     #plt.bar(['p(real ending)', 'p(wrong ending)'],
     #        [r_p_mean, w_p_mean])
-    f.savefig(os.path.join(output_dir, "ending_probabs.png"))
+    f.savefig(os.path.join(output_dir, "ending_probabs"+timestamp+".png"))
     plt.show()
     f = plt.figure()
-    plt.errorbar([ 'p(real | sentence)', 'p(wrong | sentence'], [ c_r_p_mean, c_w_p_mean],
+    plt.errorbar([ 'log p(real | sentence)', 'log p(wrong | sentence'], [ c_r_p_mean, c_w_p_mean],
                  [c_r_p_std, c_w_p_std],elinewidth=0.5, linestyle='None', marker='^')
-    f.savefig(os.path.join(output_dir, "conditional_ending_probabs.png"))
+    f.savefig(os.path.join(output_dir, "conditional_ending_probabs"+timestamp+".png"))
     plt.show()
+
+    # get where the probabs of the true ending are higher
+    right_higher = np.sum(r_p > w_p)
+    right_lower = np.sum(r_p < w_p)
+    right_c_higher = np.sum(c_r_p > c_w_p)
+    right_c_lower = np.sum(c_r_p < c_w_p)
+
+    print("number of times where right ending probab was higher:")
+    print( str(right_higher) + " / " + str(len(w_p)))
+    print("number of times where wrong ending probab was higher:")
+    print( str(right_lower) + " / " + str(len(w_p)))
+    print("number of times where conditional right ending probab was higher:")
+    print( str(right_c_higher) + " / " + str(len(w_p)))
+    print("number of times where conditional wrong ending probab was higher:")
+    print( str(right_c_lower) + " / " + str(len(w_p)))
+
+
     print("so much plot")
 
 
@@ -148,6 +185,6 @@ if __name__ == '__main__':
 
     shutil.copy2("config_full.py", os.path.join(output_dir, 'theconfigforanalysis.txt'))
 
-    r_p, w_p, c_r_p, c_w_p = get_perplexities_right_wrong(config, rnn_config, output_dir)
+    r_p, w_p, c_r_p, c_w_p, r_e_l, w_e_l, s_l = get_perplexities_right_wrong(config, rnn_config, output_dir)
 
-    create_perp_plots(r_p, w_p, c_r_p, c_w_p, output_dir)
+    create_perp_plots(r_p, w_p, c_r_p, c_w_p, r_e_l, w_e_l, s_l, output_dir)

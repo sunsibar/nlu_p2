@@ -187,6 +187,10 @@ class StoryBatch():
             self._seq_lengths = np.array([np.sum([len(sent) for sent in story]) for story in self.story_ids ])  # list of sequence lengths per batch entry
         return self._seq_lengths
 
+    def get_seq_lengths(self, which_sentences):
+        seq_ls = np.array([np.sum([len(story[idx]) for idx in which_sentences]) for story in self.story_ids ])
+        return seq_ls
+
     @property
     def batch_size(self):
         if self.story_ids is not None:

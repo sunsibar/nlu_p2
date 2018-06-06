@@ -132,14 +132,20 @@ def get_RNN_features(sess, rnn, batch, log_rnn_features=True):
         # first, get full story probabilities
         ending_idcs          = batch.sents_len(sent_without_ending)
         feed_dict            = rnn.get_feed_dict_train(batch, which_sentences=sent_n_ending_1)
-        p_end1_I_story_batch = sess.run([rnn.word_probabs],   feed_dict=feed_dict)[0]
+        if log_rnn_features:
+            p_end1_I_story_batch = sess.run([rnn.log_word_probabs],   feed_dict=feed_dict)[0]
+        else:
+            p_end1_I_story_batch = sess.run([rnn.word_probabs],   feed_dict=feed_dict)[0]
         p_end1_I_story       = []
         for bi, p1_I_story in enumerate(p_end1_I_story_batch):
             p_end1_I_story.append(np.product(p1_I_story[ ending_idcs[bi] : ]))
         p_end1_I_story = np.array(p_end1_I_story)
         assert len(p_end1_I_story) == batch.batch_size
         feed_dict            = rnn.get_feed_dict_train(batch, which_sentences=sent_n_ending_2)
-        p_end2_I_story_batch = sess.run([rnn.word_probabs],   feed_dict=feed_dict)[0]
+        if log_rnn_features:
+            p_end2_I_story_batch = sess.run([rnn.log_word_probabs],   feed_dict=feed_dict)[0]
+        else:
+            p_end2_I_story_batch = sess.run([rnn.word_probabs],   feed_dict=feed_dict)[0]
         p_end2_I_story       = []
         for bi, p2_I_story in enumerate(p_end2_I_story_batch):
             p_end2_I_story.append(np.product(p2_I_story[ ending_idcs[bi] : ]))
@@ -148,22 +154,36 @@ def get_RNN_features(sess, rnn, batch, log_rnn_features=True):
 
         # then, get both endings' probability
         feed_dict   = rnn.get_feed_dict_train(batch, which_sentences=ending_1)
-        p_end1      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)[0]
+        if log_rnn_features:
+            p_end1      = sess.run([rnn.log_sequence_probab], feed_dict=feed_dict)[0]
+        else:
+            p_end1      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)[0]
         feed_dict   = rnn.get_feed_dict_train(batch, which_sentences=ending_2)
-        p_end2      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)[0]
+        if log_rnn_features:
+            p_end2      = sess.run([rnn.log_sequence_probab], feed_dict=feed_dict)[0]
+        else:
+            p_end2      = sess.run([rnn.sequence_probab], feed_dict=feed_dict)[0]
         assert p_end1.shape == p_end2.shape == (batch.batch_size,)
 
         # get additional features p_endi_I_sent / p_endi
-        p1_I_by_p1 =  p_end1_I_story / (p_end1 + 1e-10)
-        p2_I_by_p2 =  p_end2_I_story / (p_end2 + 1e-10)
+        if log_rnn_features:
+            p1_I_by_p1 =  p_end1_I_story - (p_end1)
+            p2_I_by_p2 =  p_end2_I_story - (p_end2)
+        else:
+            p1_I_by_p1 =  p_end1_I_story / (p_end1 + 1e-10)
+            p2_I_by_p2 =  p_end2_I_story / (p_end2 + 1e-10)
         assert p1_I_by_p1.shape == p2_I_by_p2.shape == (batch.batch_size,)
+
+
+        # add average probability over all words in the ending sentence:
+        #p_end1_av = p_end1 / batch.
 
         probabs = np.array([p_end1, p_end2, p_end1_I_story, p_end2_I_story, p1_I_by_p1, p2_I_by_p2])
         probabs = probabs.transpose()
-        assert (np.abs(probabs) == probabs).any(), "Negative probability found!"
-        if log_rnn_features:
-            probabs = np.log(probabs) # + np.finfo(np.float64).eps)
-#            probabs = np.log(probabs + 1e-70)
+        assert (np.abs(probabs) == probabs).any() or log_rnn_features, "Negative probability found!"
+        #if log_rnn_features:
+        #    probabs = np.log(probabs) # + np.finfo(np.float64).eps)
+#       #     probabs = np.log(probabs + 1e-70)
         probabs[probabs==-np.inf]=-100
         assert not np.nan in probabs, "Nan value in logprobabilities!"
         assert not np.isinf(probabs).any(), "Inf value in logprobabilities!"
