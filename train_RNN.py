@@ -99,16 +99,17 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                     _, summary, step, loss = sess.run([train_op, train_summary_op, global_step, model_train.print_perplexity],
                                                         feed_dict=feed_dict)
                     train_summary_writer.add_summary(summary=summary, global_step=step)
-                    print('\ribatch {:d}, max loss {:f}'.format(ib, np.max(loss)), end='')
+                    print('\ribatch {:d}, max loss {:f}, loss {:f}'.format(ib, np.max(loss), np.mean(loss)), end='')
                     train_loss += loss
                 # -- validate --
                 valid_loss = 0.
                 for ib, ibatch in enumerate(val_dataset.all_batches()):
                 #val_allbatch = val_dataset.next_batch(shuffle=False)
-                    X_v, Y_v, val_seq_lengths = ibatch.get_padded_data()
-                    valid_loss += sess.run([model_val.print_perplexity], feed_dict={model_val.input_x: X_v,
-                                                                           model_val.input_y: Y_v,
-                                                                           model_val.sequence_length_list: val_seq_lengths})[0]
+                    #X_v, Y_v, val_seq_lengths = ibatch.get_padded_data()
+                    feed_dict = model_val.get_feed_dict_train(ibatch)
+                    valid_loss += sess.run([model_val.print_perplexity], feed_dict=feed_dict)[0]#{model_val.input_x: X_v,
+                                                                           #model_val.input_y: Y_v,
+                                                                           #model_val.sequence_length_list: val_seq_lengths})[0]
                 print("\nep:", epoch, "train_loss", train_loss / train_dataset.data_size, flush=True)
                 print("ep:", epoch, "valid_loss", valid_loss / val_dataset.data_size, flush=True)
                 sys.stdout.flush()
