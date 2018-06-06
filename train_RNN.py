@@ -100,6 +100,8 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                                                         feed_dict=feed_dict)
                     train_summary_writer.add_summary(summary=summary, global_step=step)
                     print('\ribatch {:d}, max loss {:f}, loss {:f}'.format(ib, np.max(loss), np.mean(loss)), end='')
+                    if ib % 100 == 0:
+                        print(" ") # is an "\n"
                     train_loss += loss
                 # -- validate --
                 valid_loss = 0.
