@@ -43,7 +43,7 @@ def get_perplexities_right_wrong(config, rnn_config, output_dir):
         wrong_ending_probabs = []
         cond_right_ending_probabs = []
         cond_wrong_ending_probabs = []
-        for batch in dataset_train.all_batches():
+        for batch in dataset_train.all_batches():       # TODO: log_features=True - better values
             features = get_RNN_features(sess, rnn, batch, log_rnn_features=False)
             r_e_p = [f[0] if  batch.ending_labels[i] == 0 else f[1] for i, f in enumerate(features) ]
             w_e_p = [f[1] if  batch.ending_labels[i] == 0 else f[0] for i, f in enumerate(features) ]
@@ -107,8 +107,8 @@ def create_perp_plots(r_p, w_p, c_r_p, c_w_p, output_dir):
     w_p_mean = np.mean(w_p)
     c_r_p_mean =  np.mean(c_r_p)
     c_w_p_mean = np.mean(c_w_p)
-    r_p_std = stat.stdev(r_p.astype(np.float64))
-    w_p_std = stat.stdev(w_p.astype(np.float64))
+    r_p_std = stddev(r_p.astype(np.float64))
+    w_p_std = stddev(w_p.astype(np.float64))
     c_r_p_std =  stddev(c_r_p.astype(np.float128))
     c_w_p_std = stddev(c_w_p.astype(np.float128))
 

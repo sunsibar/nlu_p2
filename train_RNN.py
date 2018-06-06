@@ -85,10 +85,8 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
 
         word_embedding = tf.placeholder(tf.float32,[None,None], name="pretrained_embeddings")
         set_x = model_train.word_embeddings.assign(word_embedding)
-        set_x_val = model_val.word_embeddings.assign(word_embedding)
 
         sess.run(set_x, feed_dict={word_embedding:my_embedding_matrix})
-        sess.run(set_x_val, feed_dict={word_embedding:my_embedding_matrix})
 
 
         try:
