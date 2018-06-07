@@ -112,7 +112,7 @@ def get_features(batch, feature_dict, use_rnn=False, sess=None, rnn=None):
         for i in range(num_sentences):
             sent_lens.append(batch.sent_len(i))
         sent_lens = np.array(sent_lens).transpose()
-    features = np.hstack((features, sent_lens))
+        features = np.hstack((features, sent_lens))
     if feature_dict['sentiment']:
         raise NotImplementedError
 
