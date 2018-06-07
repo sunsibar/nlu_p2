@@ -84,14 +84,20 @@ def get_perplexities_right_wrong(config, rnn_config, output_dir):
         right_ending_probabs = np.hstack([np.array(r) for r in right_ending_probabs])
         wrong_ending_probabs = np.hstack([np.array(r) for r in wrong_ending_probabs])
         cond_right_ending_probabs = np.hstack([np.array(r) for r in cond_right_ending_probabs])
-        cond_wrong_ending_probabs = np.hstack([np.array(r) for r in cond_wrong_ending_probabs]) #       right_ending_lengths = np.hstack([np.array(r) for r in right_ending_lengths])#      wrong_ending_lengths = np.hstack([np.array(r) for r in wrong_ending_lengths]) #        story_lengths = np.hstack([np.array(r) for r in story_lengths])
+        cond_wrong_ending_probabs = np.hstack([np.array(r) for r in cond_wrong_ending_probabs])
+        right_ending_lengths = np.hstack([np.array(r) for r in right_ending_lengths])
+        wrong_ending_lengths = np.hstack([np.array(r) for r in wrong_ending_lengths])
+        story_lengths = np.hstack([np.array(r) for r in story_lengths])
 
         L = dataset_train.data_size + dataset_val.data_size
         assert L == len(right_ending_probabs) == len(wrong_ending_probabs) \
-               == len(cond_right_ending_probabs) == len(cond_wrong_ending_probabs)  #\               == len(story_lengths) == len(right_ending_lengths) == len(wrong_ending_lengths)
+               == len(cond_right_ending_probabs) == len(cond_wrong_ending_probabs)  \
+               == len(story_lengths) == len(right_ending_lengths) == len(wrong_ending_lengths)
 
 
-        return right_ending_probabs, wrong_ending_probabs, cond_right_ending_probabs, cond_wrong_ending_probabs#, \               right_ending_lengths, wrong_ending_lengths, story_lengths
+        return right_ending_probabs, wrong_ending_probabs, \
+               cond_right_ending_probabs, cond_wrong_ending_probabs, \
+               right_ending_lengths, wrong_ending_lengths, story_lengths
 
 
 

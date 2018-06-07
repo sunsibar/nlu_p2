@@ -17,7 +17,7 @@ from utils import id2word, load_data, build_dict, convert_text_data, get_batch_d
 from RNN_model_newnew import RNNModel
 from dataset import StoryDataset, storydata_from_csv, Preprocessor
 
-def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2word_dict):
+def train(model, rnn_config, train_dataset, val_dataset, id2word_dict):
     #assert val_dataset.data_size == val_dataset.feeder.batch_size
 
     learning_rate = rnn_config['learning_rate']
@@ -39,7 +39,7 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
     with sess.as_default():
         # define the training process
         tvars = tf.trainable_variables()
-        grads, _ = tf.clip_by_global_norm(tf.gradients(model_train.minimize_loss, tvars), max_grad_norm)
+        grads, _ = tf.clip_by_global_norm(tf.gradients(model.minimize_loss, tvars), max_grad_norm)
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         global_step = tf.Variable(0, name="global_step", trainable=False)
         train_op = optimizer.apply_gradients(zip(grads, tvars),
@@ -56,7 +56,7 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
 
 
         # summary for the loss
-        loss_summary = tf.summary.scalar("print_perplexity", model_train.print_perplexity)
+        loss_summary = tf.summary.scalar("print_perplexity", model.print_perplexity)
 
         # train_summary
         train_summary_op = tf.summary.merge([loss_summary, grad_summaries_merged])
@@ -84,7 +84,7 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                     my_embedding_matrix[id,:] = np.random.uniform(-0.25, 0.25,embedding_dim)
 
         word_embedding = tf.placeholder(tf.float32,[None,None], name="pretrained_embeddings")
-        set_x = model_train.word_embeddings.assign(word_embedding)
+        set_x = model.word_embeddings.assign(word_embedding)
 
         sess.run(set_x, feed_dict={word_embedding:my_embedding_matrix})
 
@@ -95,8 +95,9 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                 train_loss = 0
                 for ib, ibatch in enumerate(train_dataset.all_batches(shuffle=True)):
                     #X, Y, batch_seq_lengths = ibatch.get_padded_data() # also todo: why are val and train loss so incredibly different?
-                    feed_dict = model_train.get_feed_dict_train(ibatch)  # todo: why different than below?
-                    _, summary, step, loss = sess.run([train_op, train_summary_op, global_step, model_train.print_perplexity],
+                    feed_dict = model.get_feed_dict_train(ibatch)  # todo: why different than below?
+                    feed_dict[model.keep_prob] = 0.5
+                    _, summary, step, loss = sess.run([train_op, train_summary_op, global_step, model.print_perplexity],
                                                         feed_dict=feed_dict)
                     train_summary_writer.add_summary(summary=summary, global_step=step)
                     print('\ribatch {:d}, max loss {:f}, loss {:f}'.format(ib, np.max(loss), np.mean(loss)), end='')
@@ -109,8 +110,9 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                         for iib, iibatch in enumerate(val_dataset.all_batches()):
                             # val_allbatch = val_dataset.next_batch(shuffle=False)
                             # X_v, Y_v, val_seq_lengths = ibatch.get_padded_data()
-                            feed_dict = model_val.get_feed_dict_train(iibatch)
-                            vloss = sess.run([model_val.print_perplexity], feed_dict=feed_dict)[
+                            feed_dict = model.get_feed_dict_train(iibatch)
+                            feed_dict[model.keep_prob] = 1.
+                            vloss = sess.run([model.print_perplexity], feed_dict=feed_dict)[
                                 0]  # {model_val.input_x: X_v,
                             # model_val.input_y: Y_v,
                             # model_val.sequence_length_list: val_seq_lengths})[0]
@@ -122,8 +124,9 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                 for ib, ibatch in enumerate(val_dataset.all_batches()):
                 #val_allbatch = val_dataset.next_batch(shuffle=False)
                     #X_v, Y_v, val_seq_lengths = ibatch.get_padded_data()
-                    feed_dict = model_val.get_feed_dict_train(ibatch)
-                    loss = sess.run([model_val.print_perplexity], feed_dict=feed_dict)[0]#{model_val.input_x: X_v,
+                    feed_dict = model.get_feed_dict_train(ibatch)
+                    feed_dict[model.keep_prob] = 1.
+                    loss = sess.run([model.print_perplexity], feed_dict=feed_dict)[0]#{model_val.input_x: X_v,
                                                                            #model_val.input_y: Y_v,
                                                                            #model_val.sequence_length_list: val_seq_lengths})[0]
                     valid_loss += loss * ibatch.batch_size
@@ -264,12 +267,9 @@ def main(config):
     story_dataset_train.preprocess(prep)
     story_dataset_val.preprocess(prep)
 
-    model_train = RNNModel(config['rnn_config'])
-    val_rnn_config = config['rnn_config'].copy()
-    val_rnn_config['mode'] = 'validate_RNN'
-    model_val = RNNModel(val_rnn_config)
+    model = RNNModel(config['rnn_config'])
 
-    out_dir = train(model_train, model_val, config['rnn_config'], id2word_dict=prep.id2word_dict,
+    out_dir = train(model, config['rnn_config'], id2word_dict=prep.id2word_dict,
                     train_dataset=story_dataset_train, val_dataset=story_dataset_val)
 
 #    quiz_file = os.path.join(config['data_dir'], config['StoryCloze_file'])
