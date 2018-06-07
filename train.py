@@ -151,9 +151,7 @@ def main(config, valid_config):
             print('\rEpoch: {:3d}, time: {:s} \t --- validation loss: {:f} --- '.format(
                 e + 1, time_delta, valid_loss / dataset_val.data_size), end='\n')
             print('\rEpoch: {:3d}, time: {:s} \t --- validation accuracy: {:f} --- '.format(
-                e + 1, time_delta, valid_accur / dataset_val.data_size), end='\n')
-            print('\rEpoch: {:3d}, time: {:s} \t --- or maybe accuracy is: {:f} --- '.format(
-                e + 1, time_delta, accur), end='\n')
+                e + 1, time_delta, accur / dataset_val.data_size), end='\n')
 
             if (e + 1) % config['save_checkpoints_every_epoch'] == 0:
                 with classifier_graph.as_default():
