@@ -157,7 +157,9 @@ def main(config, valid_config):
 
             if (e + 1) % config['save_checkpoints_every_epoch'] == 0:
                 with classifier_graph.as_default():
-                    ckpt_path = saver.save(sess, config['model_dir'] + "/ep"+str(e+1), global_step=e+1)
+                    if not os.path.exists(config['model_dir'] + "-ep"+str(e+1)):
+                        os.makedirs(config['model_dir'] + "-ep"+str(e+1))
+                    ckpt_path = saver.save(sess, config['model_dir'] + "-ep"+str(e+1), global_step=e+1)
                     print("Model saved to: "+ ckpt_path)
 
                     #with classifier_graph.as_default():
