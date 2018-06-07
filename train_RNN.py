@@ -14,7 +14,7 @@ import glob
 import sys
 import datetime
 from utils import id2word, load_data, build_dict, convert_text_data, get_batch_data
-from RNN_model_newnew import RNNModel
+from RNN_model import RNNModel
 from dataset import StoryDataset, storydata_from_csv, Preprocessor
 
 def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2word_dict):
