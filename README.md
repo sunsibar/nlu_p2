@@ -24,20 +24,22 @@ There are files for three different tasks:
 And then there are:
   - dataset.py: Contains data structures used in the remaining code
   - utils.py
- 
+
 # To train the RNN:
 - Adjust config.py if you want
 - Run  python train_RNN.py
 - Wait for the progress to be printed to stdout
 
-# To train the full model
-- Adjust config_full.py, for example, set the path to the trained RNN model to be used; set the rnn_config to the same as what it was during training of the RNN
+# To train the full model (and see the validation set accuracy)
+- Download and unzip the checkpoint at https://polybox.ethz.ch/index.php/s/JzYVZbloppZ3WUZ - keep the folder structure intact
+- Adjust config_full.py, for example, set the path to the trained RNN model to be used; set the rnn_config to the same as what it was during training of the RNN (except for the path, the config_full file is already adjusted for the rnn stored at the download link above)
+If using the downloaded model, set the path to the path where you stored it - including "checkpoints_ep4/" in the end -  and set the ID to '-12400' (a string)
 - Run python train.py
 - Wait for the progress to be printed to stdout
 
 # To analyze a trained RNN:
-- Adjust config_full.py, for example, set the path to the trained RNN model to be used; set the rnn_config to the same as what it was during training of the RNN
+- Adjust config_full.py, for example, set the path to the trained RNN model to be used; set the rnn_config to the same as what it was during training of the RNN (it's the same setup as in training the full model)
 - Run analysis.py
 - Stop the code in debug mode and look more closely at the variables, or just let it run and look at the created plots & output
-
+  
 
