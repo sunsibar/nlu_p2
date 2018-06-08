@@ -74,7 +74,8 @@ def train(model_train, model_val, rnn_config, train_dataset, val_dataset, id2wor
                 f.write(str(item))
                 f.write('\n')
         # load embedding
-        wordemb = gensim.models.KeyedVectors.load_word2vec_format(embedding_path,binary=False)
+        if is_use_embedding:
+            wordemb = gensim.models.KeyedVectors.load_word2vec_format(embedding_path,binary=False)
         my_embedding_matrix = np.random.uniform(-0.25, 0.25, (vocab_len,embedding_dim))
         if is_use_embedding:
             for id, word in id2word_dict.items():

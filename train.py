@@ -127,7 +127,7 @@ def main(config, valid_config):
                     time_delta = str(datetime.timedelta(seconds=int(time.time() - start_time)))
                     print('\rEpoch: {:3d} [{:4d}/{:4d}] time: {:s} lr: {:f} loss: {:f}'.format(
                         e + 1, i + 1, dataset_train.n_batches, time_delta, train_output['lr'],
-                        train_output['loss']), end='')
+                        train_output['loss'] / batch.batch_size), end='')
 
 
 
@@ -143,7 +143,7 @@ def main(config, valid_config):
                     val_output = sess.run(fetches, feed_dict)
                     accur = sess.run([valid_classifier.accuracy], feed_dict)[0]
                     valid_loss += val_output['loss'] * batch.batch_size
-                    valid_accur += accur * batch.batch_size
+                    #valid_accur += accur * batch.batch_size
 
             time_delta = str(datetime.timedelta(seconds=int(time.time() - start_time)))
             print('\rEpoch: {:3d}, time: {:s}; avg training loss: {:f}'.format(
@@ -151,8 +151,6 @@ def main(config, valid_config):
             print('\rEpoch: {:3d}, time: {:s} \t --- validation loss: {:f} --- '.format(
                 e + 1, time_delta, valid_loss / dataset_val.data_size), end='\n')
             print('\rEpoch: {:3d}, time: {:s} \t --- validation accuracy: {:f} --- '.format(
-                e + 1, time_delta, valid_accur / dataset_val.data_size), end='\n')
-            print('\rEpoch: {:3d}, time: {:s} \t --- or maybe accuracy is: {:f} --- '.format(
                 e + 1, time_delta, accur), end='\n')
 
             if (e + 1) % config['save_checkpoints_every_epoch'] == 0:
