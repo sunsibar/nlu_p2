@@ -84,7 +84,7 @@ torch==0.5.0a0+580d212
 tornado==5.0.2
 traitlets==4.3.2
 typing==3.6.4
-urllib3==1.22
+urllib3==1.26.5
 wcwidth==0.1.7
 Werkzeug==0.14.1
 widgetsnbextension==3.2.1
